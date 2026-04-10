@@ -1,8 +1,12 @@
 package com.example.benzinapp.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
@@ -13,10 +17,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.benzinapp.data.Refueling
 import com.example.benzinapp.ui.MainViewModel
+import com.example.benzinapp.ui.theme.ComicBlack
+import com.example.benzinapp.ui.theme.ComicYellow
+import com.example.benzinapp.ui.theme.LightBlueSky
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -32,30 +41,59 @@ fun HomeScreen(
     val refuelings by viewModel.refuelings.collectAsState()
 
     Scaffold(
+        containerColor = LightBlueSky,
         topBar = {
             TopAppBar(
-                title = { Text("BenzinApp", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = LightBlueSky,
+                    titleContentColor = ComicBlack
+                ),
+                title = { 
+                    Text(
+                        "BENZIN APP!", 
+                        fontWeight = FontWeight.ExtraBold,
+                        style = MaterialTheme.typography.headlineMedium,
+                        letterSpacing = 2.sp
+                    ) 
+                },
                 actions = {
                     IconButton(onClick = onNavigateToCharts) {
-                        Icon(Icons.Default.BarChart, contentDescription = "Grafici")
+                        Icon(Icons.Default.BarChart, contentDescription = "Grafici", tint = ComicBlack)
                     }
                 }
             )
         },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End) {
-                SmallFloatingActionButton(
-                    onClick = onNavigateToCamera,
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                // Bottone Camera stile fumetto
+                Box(
+                    modifier = Modifier
+                        .padding(bottom = 16.dp)
+                        .size(48.dp)
+                        .background(ComicYellow, RoundedCornerShape(8.dp))
+                        .border(3.dp, ComicBlack, RoundedCornerShape(8.dp))
+                        .offset(x = (-2).dp, y = (-2).dp) // Effetto profondità
+                        .background(ComicBlack, RoundedCornerShape(8.dp)) // Ombra finta
+                        .offset(x = 2.dp, y = 2.dp)
                 ) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = "Usa Foto / Gemini")
+                    IconButton(onClick = onNavigateToCamera) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = "Usa Foto", tint = ComicBlack)
+                    }
                 }
-                FloatingActionButton(
-                    onClick = onNavigateToAdd,
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+
+                // Bottone Add stile fumetto
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(Color.White, RoundedCornerShape(12.dp))
+                        .border(4.dp, ComicBlack, RoundedCornerShape(12.dp))
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Aggiungi Spesa")
+                    IconButton(
+                        onClick = onNavigateToAdd,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Aggiungi", tint = ComicBlack, modifier = Modifier.size(32.dp))
+                    }
                 }
             }
         }
@@ -65,14 +103,22 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (refuelings.isEmpty()) {
                 item {
-                    Text(
-                        "Nessuna spesa registrata. Inizia aggiungendo un rifornimento!",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        border = BorderStroke(3.dp, ComicBlack),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text(
+                            "NESSUNA SPESA! AGGIUNGI QUALCOSA!",
+                            modifier = Modifier.padding(16.dp),
+                            fontWeight = FontWeight.Bold,
+                            color = ComicBlack
+                        )
+                    }
                 }
             }
             items(refuelings) { refueling ->
@@ -84,51 +130,70 @@ fun HomeScreen(
 
 @Composable
 fun RefuelingCard(refueling: Refueling) {
-    val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     val dateString = sdf.format(Date(refueling.dateMillis))
 
+    // Card con bordo spesso nero e angoli vivi per stile comic
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        modifier = Modifier
+            .fillMaxWidth()
+            .offset(x = 4.dp, y = 4.dp) // Ombra "hard"
+            .background(ComicBlack, RoundedCornerShape(0.dp))
+            .offset(x = (-4).dp, y = (-4).dp),
+        colors = CardDefaults.cardColors(containerColor = ComicYellow),
+        border = BorderStroke(4.dp, ComicBlack),
+        shape = RoundedCornerShape(0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "Data: $dateString", style = MaterialTheme.typography.bodySmall)
+            Text(
+                text = "DATA: $dateString", 
+                fontWeight = FontWeight.ExtraBold,
+                style = MaterialTheme.typography.labelLarge,
+                color = ComicBlack
+            )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Totale: € ${String.format(Locale.US, "%.2f", refueling.totalPrice)}",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium
+                    text = "TOTALE: € ${String.format(Locale.US, "%.2f", refueling.totalPrice)}",
+                    fontWeight = FontWeight.Black,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = ComicBlack
                 )
                 Text(
                     text = "${String.format(Locale.US, "%.2f", refueling.liters)} L",
-                    style = MaterialTheme.typography.titleMedium
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = ComicBlack
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(color = ComicBlack, thickness = 3.dp, modifier = Modifier.padding(vertical = 8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "Prezzo/L: € ${String.format(Locale.US, "%.3f", refueling.pricePerLiter)}", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = "PREZZO/L: € ${String.format(Locale.US, "%.3f", refueling.pricePerLiter)}", 
+                    fontWeight = FontWeight.Bold,
+                    color = ComicBlack
+                )
             }
             if (refueling.currentKm > 0) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    color = ComicBlack,
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier.padding(top = 4.dp)
                 ) {
-                    Text(text = "Km attuali: ${refueling.currentKm}", style = MaterialTheme.typography.bodySmall)
-                    if (refueling.kmDrivenSinceLast > 0) {
-                        Text(
-                            text = "+${refueling.kmDrivenSinceLast} km dall'ultimo",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                    Text(
+                        text = " KM: ${refueling.currentKm} ${if (refueling.kmDrivenSinceLast > 0) "(+${refueling.kmDrivenSinceLast}) " else " "}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
                 }
             }
         }
