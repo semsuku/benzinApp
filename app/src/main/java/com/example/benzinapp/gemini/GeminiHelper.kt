@@ -15,7 +15,7 @@ data class ExtractedRefuelingInfo(
 
 object GeminiHelper {
     private val generativeModel = GenerativeModel(
-        modelName = "gemini-1.5-flash",
+        modelName = "gemini-2.5-flash",
         apiKey = BuildConfig.GEMINI_API_KEY
     )
 
@@ -37,8 +37,12 @@ object GeminiHelper {
                 }
             )
             
-            val responseText = response.text?.trim()?.removePrefix("```json")?.removeSuffix("```")?.trim()
-            if (responseText != null) {
+            val responseText = response.text?.trim()
+                ?.removePrefix("```json")
+                ?.removeSuffix("```")
+                ?.trim()
+            
+            if (!responseText.isNullOrEmpty()) {
                 val jsonObject = JSONObject(responseText)
                 val liters = if (jsonObject.has("liters") && !jsonObject.isNull("liters")) jsonObject.getDouble("liters") else null
                 val totalPrice = if (jsonObject.has("totalPrice") && !jsonObject.isNull("totalPrice")) jsonObject.getDouble("totalPrice") else null
