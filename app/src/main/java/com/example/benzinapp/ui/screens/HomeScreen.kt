@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import com.example.benzinapp.data.Refueling
 import com.example.benzinapp.ui.MainViewModel
 import com.example.benzinapp.ui.theme.ComicBlack
+import com.example.benzinapp.ui.theme.ComicBlue
 import com.example.benzinapp.ui.theme.ComicYellow
 import com.example.benzinapp.ui.theme.LightBlueSky
 import java.text.SimpleDateFormat
@@ -65,20 +66,21 @@ fun HomeScreen(
         },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End) {
-                // Bottone Camera stile fumetto
-                Box(
+                // Bottone Camera - Semplificato per evitare l'effetto "tutto nero"
+                SmallFloatingActionButton(
+                    onClick = onNavigateToCamera,
+                    containerColor = ComicBlue,
+                    contentColor = ComicBlack,
+                    shape = RoundedCornerShape(8.dp),
                     modifier = Modifier
                         .padding(bottom = 16.dp)
-                        .size(48.dp)
-                        .background(ComicYellow, RoundedCornerShape(8.dp))
                         .border(3.dp, ComicBlack, RoundedCornerShape(8.dp))
-                        .offset(x = (-2).dp, y = (-2).dp) // Effetto profondità
-                        .background(ComicBlack, RoundedCornerShape(8.dp)) // Ombra finta
-                        .offset(x = 2.dp, y = 2.dp)
                 ) {
-                    IconButton(onClick = onNavigateToCamera) {
-                        Icon(Icons.Default.CameraAlt, contentDescription = "Usa Foto", tint = ComicBlack)
-                    }
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt, 
+                        contentDescription = "Usa Foto",
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
 
                 // Bottone Add stile fumetto
