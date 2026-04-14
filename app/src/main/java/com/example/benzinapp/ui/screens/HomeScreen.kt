@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -144,14 +145,17 @@ fun HomeScreen(
                 }
             }
             items(refuelings) { refueling ->
-                RefuelingCard(refueling = refueling)
+                RefuelingCard(
+                    refueling = refueling,
+                    onDelete = { viewModel.deleteRefueling(refueling) }
+                )
             }
         }
     }
 }
 
 @Composable
-fun RefuelingCard(refueling: Refueling) {
+fun RefuelingCard(refueling: Refueling, onDelete: () -> Unit) {
     val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     val dateString = sdf.format(Date(refueling.dateMillis))
 
@@ -167,12 +171,25 @@ fun RefuelingCard(refueling: Refueling) {
         shape = RoundedCornerShape(0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "DATA: $dateString", 
-                fontWeight = FontWeight.ExtraBold,
-                style = MaterialTheme.typography.labelLarge,
-                color = ComicBlack
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "DATA: $dateString", 
+                    fontWeight = FontWeight.ExtraBold,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = ComicBlack
+                )
+                IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Elimina spesa",
+                        tint = ComicBlack
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),

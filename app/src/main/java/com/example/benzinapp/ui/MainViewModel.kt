@@ -46,4 +46,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             dao.insertRefueling(newRefueling)
         }
     }
+
+    fun deleteRefueling(refueling: Refueling) {
+        viewModelScope.launch {
+            dao.deleteRefueling(refueling)
+        }
+    }
 }

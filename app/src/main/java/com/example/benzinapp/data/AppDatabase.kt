@@ -3,6 +3,7 @@ package com.example.benzinapp.data
 import android.content.Context
 import androidx.room.Dao
 import androidx.room.Database
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Room
@@ -13,6 +14,9 @@ import kotlinx.coroutines.flow.Flow
 interface RefuelingDao {
     @Insert
     suspend fun insertRefueling(refueling: Refueling)
+
+    @Delete
+    suspend fun deleteRefueling(refueling: Refueling)
 
     @Query("SELECT * FROM refuelings ORDER BY dateMillis DESC")
     fun getAllRefuelings(): Flow<List<Refueling>>
