@@ -41,6 +41,30 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Action per scegliere dalla galleria
+    private val pickImageFromGallery = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            try {
+                val bitmap = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    val source = android.graphics.ImageDecoder.createSource(contentResolver, uri)
+                    android.graphics.ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+                        decoder.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE
+                        decoder.isMutableRequired = true
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    android.provider.MediaStore.Images.Media.getBitmap(contentResolver, uri)
+                }
+                processImageWithGemini(bitmap)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(this, "Errore nel caricamento dell'immagine", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "Nessuna foto selezionata", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private var onGeminiSuccess: ((Double?, Double?) -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,6 +99,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToCamera = {
                                     takePicturePreview.launch(null)
+                                },
+                                onNavigateToGallery = {
+                                    pickImageFromGallery.launch("image/*")
                                 },
                                 onNavigateToCharts = {
                                     navController.navigate("charts")

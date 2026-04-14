@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -37,6 +38,7 @@ fun HomeScreen(
     viewModel: MainViewModel,
     onNavigateToAdd: () -> Unit,
     onNavigateToCamera: () -> Unit,
+    onNavigateToGallery: () -> Unit,
     onNavigateToCharts: () -> Unit
 ) {
     val refuelings by viewModel.refuelings.collectAsState()
@@ -66,21 +68,39 @@ fun HomeScreen(
         },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End) {
-                // Bottone Camera - Semplificato per evitare l'effetto "tutto nero"
-                SmallFloatingActionButton(
-                    onClick = onNavigateToCamera,
-                    containerColor = ComicBlue,
-                    contentColor = ComicBlack,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .padding(bottom = 16.dp)
-                        .border(3.dp, ComicBlack, RoundedCornerShape(8.dp))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CameraAlt, 
-                        contentDescription = "Usa Foto",
-                        modifier = Modifier.size(24.dp)
-                    )
+                Row(modifier = Modifier.padding(bottom = 16.dp)) {
+                    // Bottone Galleria
+                    SmallFloatingActionButton(
+                        onClick = onNavigateToGallery,
+                        containerColor = ComicBlue,
+                        contentColor = ComicBlack,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .border(3.dp, ComicBlack, RoundedCornerShape(8.dp))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoLibrary,
+                            contentDescription = "Scegli da Galleria",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    // Bottone Camera
+                    SmallFloatingActionButton(
+                        onClick = onNavigateToCamera,
+                        containerColor = ComicBlue,
+                        contentColor = ComicBlack,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .border(3.dp, ComicBlack, RoundedCornerShape(8.dp))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt, 
+                            contentDescription = "Usa Foto",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
 
                 // Bottone Add stile fumetto
