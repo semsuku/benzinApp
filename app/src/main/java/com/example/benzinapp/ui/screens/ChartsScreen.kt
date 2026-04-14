@@ -26,6 +26,8 @@ import com.patrykandpatrick.vico.compose.chart.column.columnChart
 import com.patrykandpatrick.vico.compose.chart.line.lineChart
 import com.patrykandpatrick.vico.core.entry.FloatEntry
 import com.patrykandpatrick.vico.core.entry.entryModelOf
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,12 +40,30 @@ fun ChartsScreen(
     // Preparazione dati per i grafici
     val sortedByDate = refuelings.sortedBy { it.dateMillis }
     
+    // 1. Andamento Prezzo (per ogni rifornimento)
     val priceEntries = sortedByDate.mapIndexed { index, ref ->
         FloatEntry(x = index.toFloat(), y = ref.pricePerLiter.toFloat())
     }
 
-    val expenseEntries = sortedByDate.mapIndexed { index, ref ->
-        FloatEntry(x = index.toFloat(), y = ref.totalPrice.toFloat())
+    // 2. Spesa Totale Mensile (Raggruppata per mese)
+    val monthlyData = sortedByDate.groupBy { ref ->
+        val cal = Calendar.getInstance().apply { timeInMillis = ref.dateMillis }
+        cal.set(Calendar.DAY_OF_MONTH, 1)
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        cal.timeInMillis
+    }.mapValues { entry ->
+        entry.value.sumOf { it.totalPrice }
+    }.toSortedMap()
+
+    val monthlyEntries = monthlyData.values.mapIndexed { index, total ->
+        FloatEntry(x = index.toFloat(), y = total.toFloat())
+    }
+
+    val monthLabels = monthlyData.keys.map { timeMillis ->
+        SimpleDateFormat("MMM", Locale.getDefault()).format(Date(timeMillis)).uppercase()
     }
 
     Scaffold(
@@ -103,14 +123,18 @@ fun ChartsScreen(
                     }
                 }
 
-                // Grafico Spese
-                ComicChartCard(title = "SPESE TOTALI (€)") {
-                    if (expenseEntries.isNotEmpty()) {
+                // Grafico Spese Mensili (quello richiesto nello sketch)
+                ComicChartCard(title = "SPESA TOTALE PER MESE (€)") {
+                    if (monthlyEntries.isNotEmpty()) {
                         Chart(
                             chart = columnChart(),
-                            model = entryModelOf(expenseEntries),
+                            model = entryModelOf(monthlyEntries),
                             startAxis = rememberStartAxis(),
-                            bottomAxis = rememberBottomAxis()
+                            bottomAxis = rememberBottomAxis(
+                                valueFormatter = { value, _ ->
+                                    monthLabels.getOrNull(value.toInt()) ?: ""
+                                }
+                            )
                         )
                     }
                 }
