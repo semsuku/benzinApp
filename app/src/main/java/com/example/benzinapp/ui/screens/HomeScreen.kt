@@ -266,7 +266,6 @@ fun HomeScreen(
                         contentColor = ComicBlack,
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier
-                            .padding(end = 8.dp)
                             .border(3.dp, ComicBlack, RoundedCornerShape(8.dp))
                     ) {
                         Row(
@@ -289,7 +288,12 @@ fun HomeScreen(
                             }
                         }
                     }
+                }
 
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End
+                ) {
                     // Bottone Galleria
                     SmallFloatingActionButton(
                         onClick = onNavigateToGallery,
@@ -314,6 +318,7 @@ fun HomeScreen(
                         contentColor = ComicBlack,
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier
+                            .padding(end = 16.dp)
                             .border(3.dp, ComicBlack, RoundedCornerShape(8.dp))
                     ) {
                         Icon(
@@ -322,20 +327,20 @@ fun HomeScreen(
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                }
 
-                // Bottone Add stile fumetto
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(Color.White, RoundedCornerShape(12.dp))
-                        .border(4.dp, ComicBlack, RoundedCornerShape(12.dp))
-                ) {
-                    IconButton(
-                        onClick = onNavigateToAdd,
-                        modifier = Modifier.fillMaxSize()
+                    // Bottone Add stile fumetto
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(Color.White, RoundedCornerShape(12.dp))
+                            .border(4.dp, ComicBlack, RoundedCornerShape(12.dp))
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Aggiungi", tint = ComicBlack, modifier = Modifier.size(32.dp))
+                        IconButton(
+                            onClick = onNavigateToAdd,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Aggiungi", tint = ComicBlack, modifier = Modifier.size(32.dp))
+                        }
                     }
                 }
             }
