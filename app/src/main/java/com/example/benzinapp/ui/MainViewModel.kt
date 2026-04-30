@@ -28,6 +28,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val tireRotationKm: StateFlow<Int?> = _tireRotationKm.asStateFlow()
 
+    private val _insuranceExpiryDate = MutableStateFlow<Long?>(
+        if (sharedPrefs.contains("insurance_expiry_date")) sharedPrefs.getLong("insurance_expiry_date", 0) else null
+    )
+    val insuranceExpiryDate: StateFlow<Long?> = _insuranceExpiryDate.asStateFlow()
+
+    private val _insuranceAmount = MutableStateFlow(sharedPrefs.getFloat("insurance_amount", 0f).toDouble())
+    val insuranceAmount: StateFlow<Double> = _insuranceAmount.asStateFlow()
+
+    private val _bolloExpiryDate = MutableStateFlow<Long?>(
+        if (sharedPrefs.contains("bollo_expiry_date")) sharedPrefs.getLong("bollo_expiry_date", 0) else null
+    )
+    val bolloExpiryDate: StateFlow<Long?> = _bolloExpiryDate.asStateFlow()
+
+    private val _bolloAmount = MutableStateFlow(sharedPrefs.getFloat("bollo_amount", 0f).toDouble())
+    val bolloAmount: StateFlow<Double> = _bolloAmount.asStateFlow()
+
     init {
         createNotificationChannel(application)
     }
@@ -49,6 +65,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateTireRotationKm(km: Int) {
         sharedPrefs.edit().putInt("tire_rotation_km", km).apply()
         _tireRotationKm.value = km
+    }
+
+    fun updateInsurance(expiry: Long?, amount: Double) {
+        val editor = sharedPrefs.edit()
+        if (expiry != null) editor.putLong("insurance_expiry_date", expiry)
+        else editor.remove("insurance_expiry_date")
+        editor.putFloat("insurance_amount", amount.toFloat())
+        editor.apply()
+        _insuranceExpiryDate.value = expiry
+        _insuranceAmount.value = amount
+    }
+
+    fun updateBollo(expiry: Long?, amount: Double) {
+        val editor = sharedPrefs.edit()
+        if (expiry != null) editor.putLong("bollo_expiry_date", expiry)
+        else editor.remove("bollo_expiry_date")
+        editor.putFloat("bollo_amount", amount.toFloat())
+        editor.apply()
+        _bolloExpiryDate.value = expiry
+        _bolloAmount.value = amount
     }
 
     val refuelings: StateFlow<List<Refueling>> = dao.getAllRefuelings()

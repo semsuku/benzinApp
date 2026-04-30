@@ -13,15 +13,22 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.TireRepair
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
@@ -54,8 +61,30 @@ fun HomeScreen(
 ) {
     val refuelings by viewModel.refuelings.collectAsState()
     val tireRotationKm by viewModel.tireRotationKm.collectAsState()
+    
+    val insuranceExpiryDate by viewModel.insuranceExpiryDate.collectAsState()
+    val insuranceAmount by viewModel.insuranceAmount.collectAsState()
+    val bolloExpiryDate by viewModel.bolloExpiryDate.collectAsState()
+    val bolloAmount by viewModel.bolloAmount.collectAsState()
+
     var showTireDialog by remember { mutableStateOf(false) }
     var tireInput by remember { mutableStateOf("") }
+
+    var showInsuranceDialog by remember { mutableStateOf(false) }
+    var insuranceDateInput by remember { mutableStateOf("") }
+    var insuranceAmountInput by remember { mutableStateOf("") }
+
+    var showBolloDialog by remember { mutableStateOf(false) }
+    var bolloDateInput by remember { mutableStateOf("") }
+    var bolloAmountInput by remember { mutableStateOf("") }
+
+    val groupedRefuelings = remember(refuelings) {
+        refuelings.groupBy { refueling ->
+            val sdf = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
+            sdf.format(Date(refueling.dateMillis)).uppercase()
+        }
+    }
+    val expandedMonths = remember { mutableStateMapOf<String, Boolean>() }
 
     if (showTireDialog) {
         AlertDialog(
@@ -92,6 +121,40 @@ fun HomeScreen(
         )
     }
 
+    if (showInsuranceDialog) {
+        MaintenanceDialog(
+            title = "Assicurazione",
+            dateValue = insuranceDateInput,
+            onDateChange = { insuranceDateInput = it },
+            amountValue = insuranceAmountInput,
+            onAmountChange = { insuranceAmountInput = it },
+            onSave = {
+                val date = parseDate(insuranceDateInput)
+                val amount = insuranceAmountInput.toDoubleOrNull() ?: 0.0
+                viewModel.updateInsurance(date, amount)
+                showInsuranceDialog = false
+            },
+            onDismiss = { showInsuranceDialog = false }
+        )
+    }
+
+    if (showBolloDialog) {
+        MaintenanceDialog(
+            title = "Bollo",
+            dateValue = bolloDateInput,
+            onDateChange = { bolloDateInput = it },
+            amountValue = bolloAmountInput,
+            onAmountChange = { bolloAmountInput = it },
+            onSave = {
+                val date = parseDate(bolloDateInput)
+                val amount = bolloAmountInput.toDoubleOrNull() ?: 0.0
+                viewModel.updateBollo(date, amount)
+                showBolloDialog = false
+            },
+            onDismiss = { showBolloDialog = false }
+        )
+    }
+
     Scaffold(
         containerColor = LightBlueSky,
         topBar = {
@@ -117,7 +180,78 @@ fun HomeScreen(
         },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End) {
-                Row(modifier = Modifier.padding(bottom = 16.dp)) {
+                Row(
+                    modifier = Modifier
+                        .padding(bottom = 16.dp)
+                        .horizontalScroll(rememberScrollState())
+                ) {
+                    // Bottone Assicurazione
+                    val insuranceColor = if (insuranceExpiryDate != null) {
+                        val daysToExpiry = (insuranceExpiryDate!! - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)
+                        if (daysToExpiry > 30) ComicGreen else ComicRed
+                    } else ComicGreen
+
+                    SmallFloatingActionButton(
+                        onClick = {
+                            insuranceDateInput = formatMillis(insuranceExpiryDate)
+                            if (insuranceDateInput == "N/D") insuranceDateInput = ""
+                            insuranceAmountInput = String.format(Locale.US, "%.2f", insuranceAmount)
+                            showInsuranceDialog = true
+                        },
+                        containerColor = insuranceColor,
+                        contentColor = ComicBlack,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .border(3.dp, ComicBlack, RoundedCornerShape(8.dp))
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        ) {
+                            Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "ASS: ${formatMillis(insuranceExpiryDate)}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+
+                    // Bottone Bollo
+                    val bolloColor = if (bolloExpiryDate != null) {
+                        if (System.currentTimeMillis() < bolloExpiryDate!!) ComicGreen else ComicRed
+                    } else ComicGreen
+
+                    SmallFloatingActionButton(
+                        onClick = {
+                            bolloDateInput = formatMillis(bolloExpiryDate)
+                            if (bolloDateInput == "N/D") bolloDateInput = ""
+                            bolloAmountInput = String.format(Locale.US, "%.2f", bolloAmount)
+                            showBolloDialog = true
+                        },
+                        containerColor = bolloColor,
+                        contentColor = ComicBlack,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .border(3.dp, ComicBlack, RoundedCornerShape(8.dp))
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        ) {
+                            Icon(Icons.Default.ReceiptLong, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "BOLLO: ${formatMillis(bolloExpiryDate)}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+
                     val latestKm = refuelings.firstOrNull()?.currentKm ?: 0
                     val isTireRotationNeeded = tireRotationKm != null && latestKm >= tireRotationKm!!
                     val tireColor = if (isTireRotationNeeded) ComicRed else ComicGreen
@@ -142,14 +276,14 @@ fun HomeScreen(
                             Icon(
                                 imageVector = Icons.Default.TireRepair,
                                 contentDescription = "Inversione Gomme",
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                             if (tireRotationKm != null) {
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = "${tireRotationKm}km",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
+                                    fontSize = 11.sp,
                                     color = ComicBlack
                                 )
                             }
@@ -229,13 +363,47 @@ fun HomeScreen(
                         )
                     }
                 }
-            }
-            items(refuelings) { refueling ->
-                RefuelingCard(
-                    refueling = refueling,
-                    onDelete = { viewModel.deleteRefueling(refueling) },
-                    onEdit = { onNavigateToEdit(refueling) }
-                )
+            } else {
+                groupedRefuelings.forEach { (month, monthRefuelings) ->
+                    val isExpanded = expandedMonths[month] ?: true
+                    item {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { expandedMonths[month] = !isExpanded },
+                            color = ComicBlue,
+                            border = BorderStroke(3.dp, ComicBlack),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = month,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 18.sp,
+                                    color = ComicBlack
+                                )
+                                Icon(
+                                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = if (isExpanded) "Contrai" else "Espandi",
+                                    tint = ComicBlack
+                                )
+                            }
+                        }
+                    }
+                    if (isExpanded) {
+                        items(monthRefuelings) { refueling ->
+                            RefuelingCard(
+                                refueling = refueling,
+                                onDelete = { viewModel.deleteRefueling(refueling) },
+                                onEdit = { onNavigateToEdit(refueling) }
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -324,5 +492,69 @@ fun RefuelingCard(refueling: Refueling, onDelete: () -> Unit, onEdit: () -> Unit
                 }
             }
         }
+    }
+}
+
+@Composable
+fun MaintenanceDialog(
+    title: String,
+    dateValue: String,
+    onDateChange: (String) -> Unit,
+    amountValue: String,
+    onAmountChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = dateValue,
+                    onValueChange = onDateChange,
+                    label = { Text("Data Scadenza (gg/mm/aaaa)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = amountValue,
+                    onValueChange = onAmountChange,
+                    label = { Text("Importo (€)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onSave,
+                colors = ButtonDefaults.buttonColors(containerColor = ComicBlue)
+            ) {
+                Text("Salva", color = ComicBlack, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annulla", color = ComicBlack)
+            }
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(12.dp)
+    )
+}
+
+fun formatMillis(millis: Long?): String {
+    if (millis == null || millis == 0L) return "N/D"
+    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    return sdf.format(Date(millis))
+}
+
+fun parseDate(dateStr: String): Long? {
+    return try {
+        val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        sdf.parse(dateStr)?.time
+    } catch (e: Exception) {
+        null
     }
 }
