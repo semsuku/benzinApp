@@ -3,6 +3,7 @@ package com.example.benzinapp.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,10 +14,16 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.TireRepair
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,6 +34,8 @@ import com.example.benzinapp.data.Refueling
 import com.example.benzinapp.ui.MainViewModel
 import com.example.benzinapp.ui.theme.ComicBlack
 import com.example.benzinapp.ui.theme.ComicBlue
+import com.example.benzinapp.ui.theme.ComicGreen
+import com.example.benzinapp.ui.theme.ComicRed
 import com.example.benzinapp.ui.theme.ComicYellow
 import com.example.benzinapp.ui.theme.LightBlueSky
 import java.text.SimpleDateFormat
@@ -38,11 +47,50 @@ import java.util.Locale
 fun HomeScreen(
     viewModel: MainViewModel,
     onNavigateToAdd: () -> Unit,
+    onNavigateToEdit: (Refueling) -> Unit,
     onNavigateToCamera: () -> Unit,
     onNavigateToGallery: () -> Unit,
     onNavigateToCharts: () -> Unit
 ) {
     val refuelings by viewModel.refuelings.collectAsState()
+    val tireRotationKm by viewModel.tireRotationKm.collectAsState()
+    var showTireDialog by remember { mutableStateOf(false) }
+    var tireInput by remember { mutableStateOf("") }
+
+    if (showTireDialog) {
+        AlertDialog(
+            onDismissRequest = { showTireDialog = false },
+            title = { Text("Inversione Gomme", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = tireInput,
+                    onValueChange = { tireInput = it },
+                    label = { Text("Inserisci KM per inversione") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        tireInput.toIntOrNull()?.let {
+                            viewModel.updateTireRotationKm(it)
+                        }
+                        showTireDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = ComicBlue)
+                ) {
+                    Text("Salva", color = ComicBlack, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTireDialog = false }) {
+                    Text("Annulla", color = ComicBlack)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(12.dp)
+        )
+    }
 
     Scaffold(
         containerColor = LightBlueSky,
@@ -70,6 +118,44 @@ fun HomeScreen(
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End) {
                 Row(modifier = Modifier.padding(bottom = 16.dp)) {
+                    val latestKm = refuelings.firstOrNull()?.currentKm ?: 0
+                    val isTireRotationNeeded = tireRotationKm != null && latestKm >= tireRotationKm!!
+                    val tireColor = if (isTireRotationNeeded) ComicRed else ComicGreen
+
+                    // Bottone Inversione Gomme
+                    SmallFloatingActionButton(
+                        onClick = {
+                            tireInput = tireRotationKm?.toString() ?: ""
+                            showTireDialog = true 
+                        },
+                        containerColor = tireColor,
+                        contentColor = ComicBlack,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .border(3.dp, ComicBlack, RoundedCornerShape(8.dp))
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.TireRepair,
+                                contentDescription = "Inversione Gomme",
+                                modifier = Modifier.size(24.dp)
+                            )
+                            if (tireRotationKm != null) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "${tireRotationKm}km",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = ComicBlack
+                                )
+                            }
+                        }
+                    }
+
                     // Bottone Galleria
                     SmallFloatingActionButton(
                         onClick = onNavigateToGallery,
@@ -147,7 +233,8 @@ fun HomeScreen(
             items(refuelings) { refueling ->
                 RefuelingCard(
                     refueling = refueling,
-                    onDelete = { viewModel.deleteRefueling(refueling) }
+                    onDelete = { viewModel.deleteRefueling(refueling) },
+                    onEdit = { onNavigateToEdit(refueling) }
                 )
             }
         }
@@ -155,7 +242,7 @@ fun HomeScreen(
 }
 
 @Composable
-fun RefuelingCard(refueling: Refueling, onDelete: () -> Unit) {
+fun RefuelingCard(refueling: Refueling, onDelete: () -> Unit, onEdit: () -> Unit) {
     val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     val dateString = sdf.format(Date(refueling.dateMillis))
 
@@ -165,7 +252,8 @@ fun RefuelingCard(refueling: Refueling, onDelete: () -> Unit) {
             .fillMaxWidth()
             .offset(x = 4.dp, y = 4.dp) // Ombra "hard"
             .background(ComicBlack, RoundedCornerShape(0.dp))
-            .offset(x = (-4).dp, y = (-4).dp),
+            .offset(x = (-4).dp, y = (-4).dp)
+            .clickable { onEdit() },
         colors = CardDefaults.cardColors(containerColor = ComicYellow),
         border = BorderStroke(4.dp, ComicBlack),
         shape = RoundedCornerShape(0.dp)

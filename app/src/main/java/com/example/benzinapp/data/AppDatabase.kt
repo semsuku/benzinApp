@@ -6,6 +6,7 @@ import androidx.room.Database
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +16,9 @@ interface RefuelingDao {
     @Insert
     suspend fun insertRefueling(refueling: Refueling)
 
+    @Update
+    suspend fun updateRefueling(refueling: Refueling)
+
     @Delete
     suspend fun deleteRefueling(refueling: Refueling)
 
@@ -23,6 +27,9 @@ interface RefuelingDao {
 
     @Query("SELECT * FROM refuelings ORDER BY dateMillis DESC LIMIT 1")
     suspend fun getLastRefueling(): Refueling?
+
+    @Query("SELECT * FROM refuelings WHERE dateMillis < :currentDate ORDER BY dateMillis DESC LIMIT 1")
+    suspend fun getPreviousRefueling(currentDate: Long): Refueling?
 }
 
 @Database(entities = [Refueling::class], version = 1, exportSchema = false)

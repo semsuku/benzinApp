@@ -6,6 +6,8 @@ val LightBlueSky = Color(0xFFE3F2FD) // Azzurro chiaro per lo sfondo
 val ComicYellow = Color(0xFFFFF176) // Giallo per le card
 val ComicBlack = Color(0xFF212121)  // Nero per i bordi
 val ComicBlue = Color(0xFF81D4FA)   // Azzurro più vivace per i bottoni
+val ComicGreen = Color(0xFF00E676)  // Verde per stato OK
+val ComicRed = Color(0xFFFF4B4B)    // Rosso per stato Allerta
 
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)

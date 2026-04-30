@@ -1,9 +1,7 @@
 package com.example.benzinapp
 
-import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
-import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,7 +30,6 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
 
-    // Action per scattare la foto
     private val takePicturePreview = registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
         if (bitmap != null) {
             processImageWithGemini(bitmap)
@@ -41,7 +38,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Action per scegliere dalla galleria
     private val pickImageFromGallery = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             try {
@@ -69,6 +65,18 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            val requestPermissionLauncher = registerForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { isGranted: Boolean ->
+                if (!isGranted) {
+                    Toast.makeText(this, "Permesso notifiche negato", Toast.LENGTH_SHORT).show()
+                }
+            }
+            requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+
         setContent {
             BenzinAppTheme {
                 Surface(
@@ -78,7 +86,6 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     val viewModel: MainViewModel = viewModel()
 
-                    // Variabili di stato per la navigazione dopo lo scatto
                     var initialLiters by remember { mutableStateOf<Double?>(null) }
                     var initialTotal by remember { mutableStateOf<Double?>(null) }
 
@@ -96,6 +103,9 @@ class MainActivity : ComponentActivity() {
                                     initialLiters = null
                                     initialTotal = null
                                     navController.navigate("add")
+                                },
+                                onNavigateToEdit = { refueling ->
+                                    navController.navigate("edit/${refueling.id}")
                                 },
                                 onNavigateToCamera = {
                                     takePicturePreview.launch(null)
@@ -115,6 +125,21 @@ class MainActivity : ComponentActivity() {
                                 initialTotalPrice = initialTotal,
                                 onNavigateBack = { navController.popBackStack() }
                             )
+                        }
+                        composable(
+                            route = "edit/{refuelingId}",
+                            arguments = listOf(navArgument("refuelingId") { type = NavType.LongType })
+                        ) { backStackEntry ->
+                            val refuelingId = backStackEntry.arguments?.getLong("refuelingId") ?: -1L
+                            val refueling = viewModel.refuelings.collectAsState().value.find { it.id == refuelingId }
+                            
+                            if (refueling != null) {
+                                AddRefuelingScreen(
+                                    viewModel = viewModel,
+                                    refuelingToEdit = refueling,
+                                    onNavigateBack = { navController.popBackStack() }
+                                )
+                            }
                         }
                         composable("charts") {
                             ChartsScreen(

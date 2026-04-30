@@ -5,13 +5,51 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.benzinapp.data.AppDatabase
 import com.example.benzinapp.data.Refueling
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = AppDatabase.getDatabase(application).refuelingDao()
+
+    private val sharedPrefs = application.getSharedPreferences("benzin_prefs", Context.MODE_PRIVATE)
+    
+    private val _tireRotationKm = MutableStateFlow<Int?>(
+        if (sharedPrefs.contains("tire_rotation_km")) sharedPrefs.getInt("tire_rotation_km", 0) else null
+    )
+    val tireRotationKm: StateFlow<Int?> = _tireRotationKm.asStateFlow()
+
+    init {
+        createNotificationChannel(application)
+    }
+
+    private fun createNotificationChannel(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Avvisi Manutenzione"
+            val descriptionText = "Notifiche per inversione gomme e manutenzione"
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel("maintenance_channel", name, importance).apply {
+                description = descriptionText
+            }
+            val notificationManager: NotificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    fun updateTireRotationKm(km: Int) {
+        sharedPrefs.edit().putInt("tire_rotation_km", km).apply()
+        _tireRotationKm.value = km
+    }
 
     val refuelings: StateFlow<List<Refueling>> = dao.getAllRefuelings()
         .stateIn(
@@ -44,6 +82,58 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 kmDrivenSinceLast = kmDriven
             )
             dao.insertRefueling(newRefueling)
+
+            val rotationThreshold = _tireRotationKm.value
+            if (rotationThreshold != null && currentKm >= rotationThreshold) {
+                sendTireRotationNotification()
+            }
+        }
+    }
+
+    private fun sendTireRotationNotification() {
+        val context = getApplication<Application>()
+        try {
+            val builder = NotificationCompat.Builder(context, "maintenance_channel")
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle("Inversione Gomme Necessaria!")
+                .setContentText("Hai raggiunto i km impostati per l'inversione gomme.")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+
+            with(NotificationManagerCompat.from(context)) {
+                notify(1001, builder.build())
+            }
+        } catch (e: SecurityException) {
+            e.printStackTrace()
+        }
+    }
+
+    fun updateRefueling(
+        id: Long,
+        dateMillis: Long,
+        pricePerLiter: Double,
+        liters: Double,
+        totalPrice: Double,
+        currentKm: Int
+    ) {
+        viewModelScope.launch {
+            val prevRefueling = dao.getPreviousRefueling(dateMillis)
+            val kmDriven = if (prevRefueling != null && currentKm >= prevRefueling.currentKm) {
+                currentKm - prevRefueling.currentKm
+            } else {
+                0
+            }
+
+            val updatedRefueling = Refueling(
+                id = id,
+                dateMillis = dateMillis,
+                pricePerLiter = pricePerLiter,
+                liters = liters,
+                totalPrice = totalPrice,
+                currentKm = currentKm,
+                kmDrivenSinceLast = kmDriven
+            )
+            dao.updateRefueling(updatedRefueling)
         }
     }
 

@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.benzinapp.data.Refueling
 import com.example.benzinapp.ui.MainViewModel
 import java.util.Locale
 
@@ -18,11 +19,12 @@ fun AddRefuelingScreen(
     viewModel: MainViewModel,
     initialLiters: Double? = null,
     initialTotalPrice: Double? = null,
+    refuelingToEdit: Refueling? = null,
     onNavigateBack: () -> Unit
 ) {
-    var litersStr by remember { mutableStateOf(initialLiters?.toString() ?: "") }
-    var totalPriceStr by remember { mutableStateOf(initialTotalPrice?.toString() ?: "") }
-    var currentKmStr by remember { mutableStateOf("") }
+    var litersStr by remember { mutableStateOf(refuelingToEdit?.liters?.toString() ?: initialLiters?.toString() ?: "") }
+    var totalPriceStr by remember { mutableStateOf(refuelingToEdit?.totalPrice?.toString() ?: initialTotalPrice?.toString() ?: "") }
+    var currentKmStr by remember { mutableStateOf(refuelingToEdit?.currentKm?.toString() ?: "") }
 
     // Calcolo automatico del prezzo al litro
     val pricePerLiterStr = remember(litersStr, totalPriceStr) {
@@ -38,7 +40,7 @@ fun AddRefuelingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Aggiungi Rifornimento") },
+                title = { Text(if (refuelingToEdit != null) "Modifica Rifornimento" else "Aggiungi Rifornimento") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Indietro")
@@ -90,7 +92,7 @@ fun AddRefuelingScreen(
             OutlinedTextField(
                 value = currentKmStr,
                 onValueChange = { currentKmStr = it },
-                label = { Text("Km Attuali (opzionale per tracciare consumi)") },
+                label = { Text("Km Attuali") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -105,20 +107,31 @@ fun AddRefuelingScreen(
                     val km = currentKmStr.toIntOrNull() ?: 0
 
                     if (liters > 0 && total > 0) {
-                        viewModel.addRefueling(
-                            dateMillis = System.currentTimeMillis(),
-                            pricePerLiter = price,
-                            liters = liters,
-                            totalPrice = total,
-                            currentKm = km
-                        )
+                        if (refuelingToEdit != null) {
+                            viewModel.updateRefueling(
+                                id = refuelingToEdit.id,
+                                dateMillis = refuelingToEdit.dateMillis,
+                                pricePerLiter = price,
+                                liters = liters,
+                                totalPrice = total,
+                                currentKm = km
+                            )
+                        } else {
+                            viewModel.addRefueling(
+                                dateMillis = System.currentTimeMillis(),
+                                pricePerLiter = price,
+                                liters = liters,
+                                totalPrice = total,
+                                currentKm = km
+                            )
+                        }
                         onNavigateBack()
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = litersStr.isNotBlank() && totalPriceStr.isNotBlank() && pricePerLiterStr.isNotBlank()
             ) {
-                Text("Salva Spesa")
+                Text(if (refuelingToEdit != null) "Salva Modifiche" else "Salva Spesa")
             }
         }
     }

@@ -45,8 +45,8 @@ fun ChartsScreen(
         FloatEntry(x = index.toFloat(), y = ref.pricePerLiter.toFloat())
     }
 
-    // 2. Spesa Totale Mensile (Raggruppata per mese)
-    val monthlyData = sortedByDate.groupBy { ref ->
+    // Raggruppamento per mese per i grafici a colonne
+    val monthlyGroups = sortedByDate.groupBy { ref ->
         val cal = Calendar.getInstance().apply { timeInMillis = ref.dateMillis }
         cal.set(Calendar.DAY_OF_MONTH, 1)
         cal.set(Calendar.HOUR_OF_DAY, 0)
@@ -54,15 +54,19 @@ fun ChartsScreen(
         cal.set(Calendar.SECOND, 0)
         cal.set(Calendar.MILLISECOND, 0)
         cal.timeInMillis
-    }.mapValues { entry ->
-        entry.value.sumOf { it.totalPrice }
     }.toSortedMap()
 
-    val monthlyEntries = monthlyData.values.mapIndexed { index, total ->
-        FloatEntry(x = index.toFloat(), y = total.toFloat())
+    // 2. Spesa Totale Mensile
+    val monthlyExpenseEntries = monthlyGroups.values.mapIndexed { index, list ->
+        FloatEntry(x = index.toFloat(), y = list.sumOf { it.totalPrice }.toFloat())
     }
 
-    val monthLabels = monthlyData.keys.map { timeMillis ->
+    // 3. KM Totali Mensili (somma dei kmDrivenSinceLast nel mese)
+    val monthlyKmEntries = monthlyGroups.values.mapIndexed { index, list ->
+        FloatEntry(x = index.toFloat(), y = list.sumOf { it.kmDrivenSinceLast }.toFloat())
+    }
+
+    val monthLabels = monthlyGroups.keys.map { timeMillis ->
         SimpleDateFormat("MMM", Locale.getDefault()).format(Date(timeMillis)).uppercase()
     }
 
@@ -123,12 +127,28 @@ fun ChartsScreen(
                     }
                 }
 
-                // Grafico Spese Mensili (quello richiesto nello sketch)
+                // Grafico Spese Mensili
                 ComicChartCard(title = "SPESA TOTALE PER MESE (€)") {
-                    if (monthlyEntries.isNotEmpty()) {
+                    if (monthlyExpenseEntries.isNotEmpty()) {
                         Chart(
                             chart = columnChart(),
-                            model = entryModelOf(monthlyEntries),
+                            model = entryModelOf(monthlyExpenseEntries),
+                            startAxis = rememberStartAxis(),
+                            bottomAxis = rememberBottomAxis(
+                                valueFormatter = { value, _ ->
+                                    monthLabels.getOrNull(value.toInt()) ?: ""
+                                }
+                            )
+                        )
+                    }
+                }
+
+                // Grafico KM Mensili
+                ComicChartCard(title = "KM PERCORSI PER MESE") {
+                    if (monthlyKmEntries.isNotEmpty()) {
+                        Chart(
+                            chart = columnChart(),
+                            model = entryModelOf(monthlyKmEntries),
                             startAxis = rememberStartAxis(),
                             bottomAxis = rememberBottomAxis(
                                 valueFormatter = { value, _ ->
