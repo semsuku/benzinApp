@@ -27,14 +27,38 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
+
+    enum class ImageProcessMode {
+        FUEL_PUMP,
+        ODOMETER
+    }
+
+    private var currentMode = ImageProcessMode.FUEL_PUMP
+    private var tempLiters: Double? = null
+    private var tempTotalPrice: Double? = null
+
+    private var onFuelPumpExtracted: (() -> Unit)? = null
+    private var onOdometerExtracted: ((Int?) -> Unit)? = null
 
     private val takePicturePreview = registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
         if (bitmap != null) {
             processImageWithGemini(bitmap)
         } else {
-            Toast.makeText(this, "Nessuna foto scattata", Toast.LENGTH_SHORT).show()
+            if (currentMode == ImageProcessMode.FUEL_PUMP) {
+                Toast.makeText(this, "Nessuna foto scattata", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Rilevamento contachilometri annullato", Toast.LENGTH_SHORT).show()
+                onOdometerExtracted?.invoke(null)
+            }
         }
     }
 
@@ -55,13 +79,19 @@ class MainActivity : ComponentActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
                 Toast.makeText(this, "Errore nel caricamento dell'immagine", Toast.LENGTH_SHORT).show()
+                if (currentMode == ImageProcessMode.ODOMETER) {
+                    onOdometerExtracted?.invoke(null)
+                }
             }
         } else {
-            Toast.makeText(this, "Nessuna foto selezionata", Toast.LENGTH_SHORT).show()
+            if (currentMode == ImageProcessMode.FUEL_PUMP) {
+                Toast.makeText(this, "Nessuna foto selezionata", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Rilevamento contachilometri annullato", Toast.LENGTH_SHORT).show()
+                onOdometerExtracted?.invoke(null)
+            }
         }
     }
-
-    private var onGeminiSuccess: ((Double?, Double?) -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,11 +118,64 @@ class MainActivity : ComponentActivity() {
 
                     var initialLiters by remember { mutableStateOf<Double?>(null) }
                     var initialTotal by remember { mutableStateOf<Double?>(null) }
+                    var initialKm by remember { mutableStateOf<Int?>(null) }
 
-                    onGeminiSuccess = { liters, total ->
-                        initialLiters = liters
-                        initialTotal = total
+                    var showOdometerPrompt by remember { mutableStateOf(false) }
+
+                    onFuelPumpExtracted = {
+                        initialLiters = tempLiters
+                        initialTotal = tempTotalPrice
+                        initialKm = null
+                        showOdometerPrompt = true
+                    }
+
+                    onOdometerExtracted = { km ->
+                        initialKm = km
                         navController.navigate("add")
+                    }
+
+                    if (showOdometerPrompt) {
+                        AlertDialog(
+                            onDismissRequest = {
+                                showOdometerPrompt = false
+                                navController.navigate("add")
+                            },
+                            title = { Text("Aggiungi Contachilometri") },
+                            text = { Text("Vuoi scattare o selezionare anche una foto del contachilometri per impostare automaticamente i km?") },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        showOdometerPrompt = false
+                                        currentMode = ImageProcessMode.ODOMETER
+                                        takePicturePreview.launch(null)
+                                    }
+                                ) {
+                                    Text("Scatta Foto")
+                                }
+                            },
+                            dismissButton = {
+                                Row {
+                                    TextButton(
+                                        onClick = {
+                                            showOdometerPrompt = false
+                                            currentMode = ImageProcessMode.ODOMETER
+                                            pickImageFromGallery.launch("image/*")
+                                        }
+                                    ) {
+                                        Text("Scegli da Galleria")
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    TextButton(
+                                        onClick = {
+                                            showOdometerPrompt = false
+                                            navController.navigate("add")
+                                        }
+                                    ) {
+                                        Text("No, grazie")
+                                    }
+                                }
+                            }
+                        )
                     }
 
                     NavHost(navController = navController, startDestination = "home") {
@@ -102,15 +185,18 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToAdd = {
                                     initialLiters = null
                                     initialTotal = null
+                                    initialKm = null
                                     navController.navigate("add")
                                 },
                                 onNavigateToEdit = { refueling ->
                                     navController.navigate("edit/${refueling.id}")
                                 },
                                 onNavigateToCamera = {
+                                    currentMode = ImageProcessMode.FUEL_PUMP
                                     takePicturePreview.launch(null)
                                 },
                                 onNavigateToGallery = {
+                                    currentMode = ImageProcessMode.FUEL_PUMP
                                     pickImageFromGallery.launch("image/*")
                                 },
                                 onNavigateToCharts = {
@@ -123,6 +209,7 @@ class MainActivity : ComponentActivity() {
                                 viewModel = viewModel,
                                 initialLiters = initialLiters,
                                 initialTotalPrice = initialTotal,
+                                initialKm = initialKm,
                                 onNavigateBack = { navController.popBackStack() }
                             )
                         }
@@ -156,14 +243,29 @@ class MainActivity : ComponentActivity() {
     private fun processImageWithGemini(bitmap: Bitmap) {
         Toast.makeText(this, "Analisi immagine in corso...", Toast.LENGTH_LONG).show()
         CoroutineScope(Dispatchers.IO).launch {
-            val result = GeminiHelper.extractDataFromImage(bitmap)
-            withContext(Dispatchers.Main) {
-                if (result != null) {
-                    Toast.makeText(this@MainActivity, "Dati estratti con successo!", Toast.LENGTH_SHORT).show()
-                    onGeminiSuccess?.invoke(result.liters, result.totalPrice)
-                } else {
-                    Toast.makeText(this@MainActivity, "Errore nell'estrazione dei dati. Reinserisci manualmente.", Toast.LENGTH_LONG).show()
-                    onGeminiSuccess?.invoke(null, null)
+            if (currentMode == ImageProcessMode.FUEL_PUMP) {
+                val result = GeminiHelper.extractDataFromImage(bitmap)
+                withContext(Dispatchers.Main) {
+                    if (result != null) {
+                        Toast.makeText(this@MainActivity, "Dati pompa estratti!", Toast.LENGTH_SHORT).show()
+                        tempLiters = result.liters
+                        tempTotalPrice = result.totalPrice
+                    } else {
+                        Toast.makeText(this@MainActivity, "Errore nell'estrazione dati pompa. Inserisci manualmente.", Toast.LENGTH_LONG).show()
+                        tempLiters = null
+                        tempTotalPrice = null
+                    }
+                    onFuelPumpExtracted?.invoke()
+                }
+            } else {
+                val km = GeminiHelper.extractOdometerFromImage(bitmap)
+                withContext(Dispatchers.Main) {
+                    if (km != null) {
+                        Toast.makeText(this@MainActivity, "Contachilometri rilevato: $km km", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@MainActivity, "Errore nella lettura dei km. Inserisci manualmente.", Toast.LENGTH_LONG).show()
+                    }
+                    onOdometerExtracted?.invoke(km)
                 }
             }
         }

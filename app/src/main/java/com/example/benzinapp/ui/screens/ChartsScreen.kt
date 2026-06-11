@@ -10,9 +10,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.benzinapp.ui.MainViewModel
@@ -22,8 +25,10 @@ import com.example.benzinapp.ui.theme.LightBlueSky
 import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
-import com.patrykandpatrick.vico.compose.chart.column.columnChart
 import com.patrykandpatrick.vico.compose.chart.line.lineChart
+import com.patrykandpatrick.vico.compose.component.lineComponent
+import com.patrykandpatrick.vico.core.chart.line.LineChart
+import com.patrykandpatrick.vico.core.component.shape.shader.DynamicShaders
 import com.patrykandpatrick.vico.core.entry.FloatEntry
 import com.patrykandpatrick.vico.core.entry.entryModelOf
 import java.text.SimpleDateFormat
@@ -39,7 +44,7 @@ fun ChartsScreen(
 
     // Preparazione dati per i grafici
     val sortedByDate = refuelings.sortedBy { it.dateMillis }
-    
+
     // 1. Andamento Prezzo (per ogni rifornimento)
     val priceEntries = sortedByDate.mapIndexed { index, ref ->
         FloatEntry(x = index.toFloat(), y = ref.pricePerLiter.toFloat())
@@ -57,17 +62,17 @@ fun ChartsScreen(
     }.toSortedMap()
 
     // 2. Spesa Totale Mensile
-    val monthlyExpenseEntries = monthlyGroups.values.mapIndexed { index, list ->
-        FloatEntry(x = index.toFloat(), y = list.sumOf { it.totalPrice }.toFloat())
+    val monthlyExpenseData = monthlyGroups.entries.map { (timeMillis, list) ->
+        val label = SimpleDateFormat("MMM\nyyyy", Locale.getDefault()).format(Date(timeMillis)).uppercase()
+        val value = list.sumOf { it.totalPrice }
+        Pair(label, value)
     }
 
-    // 3. KM Totali Mensili (somma dei kmDrivenSinceLast nel mese)
-    val monthlyKmEntries = monthlyGroups.values.mapIndexed { index, list ->
-        FloatEntry(x = index.toFloat(), y = list.sumOf { it.kmDrivenSinceLast }.toFloat())
-    }
-
-    val monthLabels = monthlyGroups.keys.map { timeMillis ->
-        SimpleDateFormat("MMM", Locale.getDefault()).format(Date(timeMillis)).uppercase()
+    // 3. KM Totali Mensili
+    val monthlyKmData = monthlyGroups.entries.map { (timeMillis, list) ->
+        val label = SimpleDateFormat("MMM\nyyyy", Locale.getDefault()).format(Date(timeMillis)).uppercase()
+        val value = list.sumOf { it.kmDrivenSinceLast }.toDouble()
+        Pair(label, value)
     }
 
     Scaffold(
@@ -78,12 +83,12 @@ fun ChartsScreen(
                     containerColor = LightBlueSky,
                     titleContentColor = ComicBlack
                 ),
-                title = { 
+                title = {
                     Text(
-                        "STATISTICHE!", 
+                        "STATISTICHE!",
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 2.sp
-                    ) 
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -115,48 +120,122 @@ fun ChartsScreen(
                     )
                 }
             } else {
-                // Grafico Prezzo
+                // Grafico Prezzo (Vico line chart)
                 ComicChartCard(title = "ANDAMENTO PREZZO (€/L)") {
                     if (priceEntries.isNotEmpty()) {
-                        Chart(
-                            chart = lineChart(),
-                            model = entryModelOf(priceEntries),
-                            startAxis = rememberStartAxis(),
-                            bottomAxis = rememberBottomAxis()
-                        )
+                        Box(modifier = Modifier.height(200.dp)) {
+                            Chart(
+                                chart = lineChart(
+                                    lines = listOf(
+                                        LineChart.LineSpec(
+                                            lineColor = android.graphics.Color.RED,
+                                            lineThicknessDp = 3f
+                                        )
+                                    )
+                                ),
+                                model = entryModelOf(priceEntries),
+                                startAxis = rememberStartAxis(),
+                                bottomAxis = rememberBottomAxis()
+                            )
+                        }
                     }
                 }
 
-                // Grafico Spese Mensili
+                // Grafico Spese Mensili (custom bar chart con etichette dentro)
                 ComicChartCard(title = "SPESA TOTALE PER MESE (€)") {
-                    if (monthlyExpenseEntries.isNotEmpty()) {
-                        Chart(
-                            chart = columnChart(),
-                            model = entryModelOf(monthlyExpenseEntries),
-                            startAxis = rememberStartAxis(),
-                            bottomAxis = rememberBottomAxis(
-                                valueFormatter = { value, _ ->
-                                    monthLabels.getOrNull(value.toInt()) ?: ""
-                                }
-                            )
+                    if (monthlyExpenseData.isNotEmpty()) {
+                        MonthlyBarChart(
+                            data = monthlyExpenseData,
+                            labelFormatter = { value -> "€ ${String.format(Locale.US, "%.0f", value)}" },
+                            barColor = Color(0xFF4A90D9)
                         )
                     }
                 }
 
-                // Grafico KM Mensili
+                // Grafico KM Mensili (custom bar chart con etichette dentro)
                 ComicChartCard(title = "KM PERCORSI PER MESE") {
-                    if (monthlyKmEntries.isNotEmpty()) {
-                        Chart(
-                            chart = columnChart(),
-                            model = entryModelOf(monthlyKmEntries),
-                            startAxis = rememberStartAxis(),
-                            bottomAxis = rememberBottomAxis(
-                                valueFormatter = { value, _ ->
-                                    monthLabels.getOrNull(value.toInt()) ?: ""
-                                }
-                            )
+                    if (monthlyKmData.isNotEmpty()) {
+                        MonthlyBarChart(
+                            data = monthlyKmData,
+                            labelFormatter = { value -> "${value.toInt()} km" },
+                            barColor = Color(0xFF6DBF67)
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Grafico a barre orizzontali custom con etichetta del valore visibile dentro la barra grigia.
+ * Ogni barra occupa una riga: [etichetta mese] [████ valore ████]
+ */
+@Composable
+fun MonthlyBarChart(
+    data: List<Pair<String, Double>>,
+    labelFormatter: (Double) -> String,
+    barColor: Color
+) {
+    val maxValue = data.maxOfOrNull { it.second }?.takeIf { it > 0 } ?: 1.0
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        data.forEach { (label, value) ->
+            val fraction = (value / maxValue).toFloat().coerceIn(0f, 1f)
+            val valueText = labelFormatter(value)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Etichetta mese/anno a sinistra
+                Text(
+                    text = label,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ComicBlack,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.width(38.dp),
+                    lineHeight = 12.sp
+                )
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                // Barra con valore scritto dentro
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(Color(0xFFDDDDDD), RoundedCornerShape(4.dp))
+                        .padding(2.dp)
+                ) {
+                    val totalWidth = maxWidth
+
+                    // Barra colorata proporzionale al valore
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(totalWidth * fraction)
+                            .background(barColor, RoundedCornerShape(3.dp))
+                    )
+
+                    // Testo del valore centrato verticalmente, sempre visibile sopra la barra
+                    Text(
+                        text = valueText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Black,
+                        color = ComicBlack,
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 6.dp)
+                    )
                 }
             }
         }
@@ -190,9 +269,7 @@ fun ComicChartCard(title: String, content: @Composable () -> Unit) {
                     thickness = 3.dp,
                     color = ComicBlack
                 )
-                Box(modifier = Modifier.height(200.dp)) {
-                    content()
-                }
+                content()
             }
         }
     }

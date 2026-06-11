@@ -19,12 +19,13 @@ fun AddRefuelingScreen(
     viewModel: MainViewModel,
     initialLiters: Double? = null,
     initialTotalPrice: Double? = null,
+    initialKm: Int? = null,
     refuelingToEdit: Refueling? = null,
     onNavigateBack: () -> Unit
 ) {
     var litersStr by remember { mutableStateOf(refuelingToEdit?.liters?.toString() ?: initialLiters?.toString() ?: "") }
     var totalPriceStr by remember { mutableStateOf(refuelingToEdit?.totalPrice?.toString() ?: initialTotalPrice?.toString() ?: "") }
-    var currentKmStr by remember { mutableStateOf(refuelingToEdit?.currentKm?.toString() ?: "") }
+    var currentKmStr by remember { mutableStateOf(refuelingToEdit?.currentKm?.toString() ?: initialKm?.toString() ?: "") }
 
     // Calcolo automatico del prezzo al litro
     val pricePerLiterStr = remember(litersStr, totalPriceStr) {
@@ -56,13 +57,14 @@ fun AddRefuelingScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (initialLiters != null || initialTotalPrice != null) {
+            if (initialLiters != null || initialTotalPrice != null || initialKm != null) {
                 Text(
                     text = "Dati estratti automaticamente da Gemini AI ✨",
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
+
 
             OutlinedTextField(
                 value = litersStr,

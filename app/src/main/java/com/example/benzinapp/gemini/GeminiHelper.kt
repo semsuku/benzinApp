@@ -53,4 +53,39 @@ object GeminiHelper {
         }
         return@withContext null
     }
+
+    suspend fun extractOdometerFromImage(bitmap: Bitmap): Int? = withContext(Dispatchers.IO) {
+        try {
+            val prompt = """
+                Analizza questa immagine del contachilometri di una macchina.
+                Estrai e restituisci il numero totale di chilometri percorsi (odometro/chilometraggio totale) **esclusivamente** in formato JSON valido, senza testo aggiuntivo (niente markdown, niente backticks), con la seguente chiave:
+                - "km" (integer, chilometri totali, es. 124500)
+                
+                Se il valore non è leggibile o non è presente, metti null.
+            """.trimIndent()
+
+            val response = generativeModel.generateContent(
+                content {
+                    image(bitmap)
+                    text(prompt)
+                }
+            )
+            
+            val responseText = response.text?.trim()
+                ?.removePrefix("```json")
+                ?.removeSuffix("```")
+                ?.trim()
+            
+            if (!responseText.isNullOrEmpty()) {
+                val jsonObject = JSONObject(responseText)
+                if (jsonObject.has("km") && !jsonObject.isNull("km")) {
+                    return@withContext jsonObject.getInt("km")
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return@withContext null
+    }
 }
+

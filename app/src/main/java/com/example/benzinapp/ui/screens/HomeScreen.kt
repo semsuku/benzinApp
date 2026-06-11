@@ -370,7 +370,7 @@ fun HomeScreen(
                 }
             } else {
                 groupedRefuelings.forEach { (month, monthRefuelings) ->
-                    val isExpanded = expandedMonths[month] ?: true
+                    val isExpanded = expandedMonths[month] ?: false
                     item {
                         Surface(
                             modifier = Modifier
