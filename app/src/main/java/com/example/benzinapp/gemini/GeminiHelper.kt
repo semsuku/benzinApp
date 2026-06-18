@@ -8,10 +8,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
+/**
+ * Data class representing the result of refueling data extraction.
+ */
 data class ExtractedRefuelingInfo(
     val liters: Double?,
     val totalPrice: Double?
 )
+
+/**
+ * Sealed interface representing the outcome of Gemini API operations.
+ */
+sealed interface GeminiResult<out T> {
+    data class Success<out T>(val data: T) : GeminiResult<T>
+    object ParsingError : GeminiResult<Nothing>
+    data class ApiError(val message: String?) : GeminiResult<Nothing>
+}
 
 object GeminiHelper {
     private val generativeModel = GenerativeModel(
@@ -19,7 +31,10 @@ object GeminiHelper {
         apiKey = BuildConfig.GEMINI_API_KEY
     )
 
-    suspend fun extractDataFromImage(bitmap: Bitmap): ExtractedRefuelingInfo? = withContext(Dispatchers.IO) {
+    /**
+     * Extracts refueling liters and total price from an image.
+     */
+    suspend fun extractDataFromImage(bitmap: Bitmap): GeminiResult<ExtractedRefuelingInfo> = withContext(Dispatchers.IO) {
         try {
             val prompt = """
                 Analizza questa immagine di un display di una pompa di benzina o scontrino di rifornimento.
@@ -46,15 +61,19 @@ object GeminiHelper {
                 val jsonObject = JSONObject(responseText)
                 val liters = if (jsonObject.has("liters") && !jsonObject.isNull("liters")) jsonObject.getDouble("liters") else null
                 val totalPrice = if (jsonObject.has("totalPrice") && !jsonObject.isNull("totalPrice")) jsonObject.getDouble("totalPrice") else null
-                return@withContext ExtractedRefuelingInfo(liters, totalPrice)
+                return@withContext GeminiResult.Success(ExtractedRefuelingInfo(liters, totalPrice))
             }
+            return@withContext GeminiResult.ParsingError
         } catch (e: Exception) {
             e.printStackTrace()
+            return@withContext GeminiResult.ApiError(e.localizedMessage)
         }
-        return@withContext null
     }
 
-    suspend fun extractOdometerFromImage(bitmap: Bitmap): Int? = withContext(Dispatchers.IO) {
+    /**
+     * Extracts total odometer mileage from an image.
+     */
+    suspend fun extractOdometerFromImage(bitmap: Bitmap): GeminiResult<Int?> = withContext(Dispatchers.IO) {
         try {
             val prompt = """
                 Analizza questa immagine del contachilometri di una macchina.
@@ -78,14 +97,13 @@ object GeminiHelper {
             
             if (!responseText.isNullOrEmpty()) {
                 val jsonObject = JSONObject(responseText)
-                if (jsonObject.has("km") && !jsonObject.isNull("km")) {
-                    return@withContext jsonObject.getInt("km")
-                }
+                val km = if (jsonObject.has("km") && !jsonObject.isNull("km")) jsonObject.getInt("km") else null
+                return@withContext GeminiResult.Success(km)
             }
+            return@withContext GeminiResult.ParsingError
         } catch (e: Exception) {
             e.printStackTrace()
+            return@withContext GeminiResult.ApiError(e.localizedMessage)
         }
-        return@withContext null
     }
 }
-

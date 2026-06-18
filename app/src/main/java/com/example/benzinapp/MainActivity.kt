@@ -18,6 +18,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.benzinapp.gemini.GeminiHelper
+import com.example.benzinapp.gemini.GeminiResult
 import com.example.benzinapp.ui.MainViewModel
 import com.example.benzinapp.ui.screens.AddRefuelingScreen
 import com.example.benzinapp.ui.screens.ChartsScreen
@@ -45,6 +46,7 @@ class MainActivity : ComponentActivity() {
     private var currentMode = ImageProcessMode.FUEL_PUMP
     private var tempLiters: Double? = null
     private var tempTotalPrice: Double? = null
+    private var showQuotaDialog by mutableStateOf(false)
 
     private var onFuelPumpExtracted: (() -> Unit)? = null
     private var onOdometerExtracted: ((Int?) -> Unit)? = null
@@ -96,6 +98,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Initialize AdMob Mobile Ads SDK
+        com.google.android.gms.ads.MobileAds.initialize(this) {}
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             val requestPermissionLauncher = registerForActivityResult(
                 ActivityResultContracts.RequestPermission()
@@ -113,6 +118,19 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    if (showQuotaDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showQuotaDialog = false },
+                            title = { Text("Servizio non disponibile") },
+                            text = { Text("Al momento il servizio di riconoscimento automatico non è disponibile a causa del raggiungimento del limite di utilizzi gratuiti. Riprova più tardi o inserisci i dati manualmente.") },
+                            confirmButton = {
+                                TextButton(onClick = { showQuotaDialog = false }) {
+                                    Text("OK")
+                                }
+                            }
+                        )
+                    }
+
                     val navController = rememberNavController()
                     val viewModel: MainViewModel = viewModel()
 
@@ -246,26 +264,47 @@ class MainActivity : ComponentActivity() {
             if (currentMode == ImageProcessMode.FUEL_PUMP) {
                 val result = GeminiHelper.extractDataFromImage(bitmap)
                 withContext(Dispatchers.Main) {
-                    if (result != null) {
-                        Toast.makeText(this@MainActivity, "Dati pompa estratti!", Toast.LENGTH_SHORT).show()
-                        tempLiters = result.liters
-                        tempTotalPrice = result.totalPrice
-                    } else {
-                        Toast.makeText(this@MainActivity, "Errore nell'estrazione dati pompa. Inserisci manualmente.", Toast.LENGTH_LONG).show()
-                        tempLiters = null
-                        tempTotalPrice = null
+                    when (result) {
+                        is GeminiResult.Success -> {
+                            Toast.makeText(this@MainActivity, "Dati pompa estratti!", Toast.LENGTH_SHORT).show()
+                            tempLiters = result.data.liters
+                            tempTotalPrice = result.data.totalPrice
+                        }
+                        is GeminiResult.ApiError -> {
+                            showQuotaDialog = true
+                            tempLiters = null
+                            tempTotalPrice = null
+                        }
+                        is GeminiResult.ParsingError -> {
+                            Toast.makeText(this@MainActivity, "Errore nell'estrazione dati pompa. Inserisci manualmente.", Toast.LENGTH_LONG).show()
+                            tempLiters = null
+                            tempTotalPrice = null
+                        }
                     }
                     onFuelPumpExtracted?.invoke()
                 }
             } else {
-                val km = GeminiHelper.extractOdometerFromImage(bitmap)
+                val result = GeminiHelper.extractOdometerFromImage(bitmap)
                 withContext(Dispatchers.Main) {
-                    if (km != null) {
-                        Toast.makeText(this@MainActivity, "Contachilometri rilevato: $km km", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this@MainActivity, "Errore nella lettura dei km. Inserisci manualmente.", Toast.LENGTH_LONG).show()
+                    when (result) {
+                        is GeminiResult.Success -> {
+                            val km = result.data
+                            if (km != null) {
+                                Toast.makeText(this@MainActivity, "Contachilometri rilevato: $km km", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(this@MainActivity, "Errore nella lettura dei km. Inserisci manualmente.", Toast.LENGTH_LONG).show()
+                            }
+                            onOdometerExtracted?.invoke(km)
+                        }
+                        is GeminiResult.ApiError -> {
+                            showQuotaDialog = true
+                            onOdometerExtracted?.invoke(null)
+                        }
+                        is GeminiResult.ParsingError -> {
+                            Toast.makeText(this@MainActivity, "Errore nella lettura dei km. Inserisci manualmente.", Toast.LENGTH_LONG).show()
+                            onOdometerExtracted?.invoke(null)
+                        }
                     }
-                    onOdometerExtracted?.invoke(km)
                 }
             }
         }

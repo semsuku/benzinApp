@@ -20,7 +20,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.benzinapp"
+        applicationId = "com.franc.benzinapp"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -31,6 +31,18 @@ android {
         buildConfigField("String", "GEMINI_API_KEY", "\"$cleanApiKey\"")
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFileVal = localProperties.getProperty("RELEASE_STORE_FILE")
+            if (storeFileVal != null) {
+                storeFile = rootProject.file(storeFileVal)
+                storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
+                keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -38,6 +50,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -81,6 +94,9 @@ dependencies {
 
     // ViewModel Compose
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // AdMob
+    implementation(libs.play.services.ads)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

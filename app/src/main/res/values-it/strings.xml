@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BenzinApp</string>
+    
+    <!-- HomeScreen -->
+    <string name="tire_rotation">Inversione Gomme</string>
+    <string name="insert_km_for_tire_rotation">Inserisci KM per inversione</string>
+    <string name="save">Salva</string>
+    <string name="cancel">Annulla</string>
+    <string name="oil_change">Cambio Olio</string>
+    <string name="insert_km_for_oil_change">Inserisci KM per cambio olio</string>
+    <string name="insurance">Assicurazione</string>
+    <string name="expiry_date">Data Scadenza (gg/mm/aaaa)</string>
+    <string name="amount">Importo (€)</string>
+    <string name="car_tax">Bollo</string>
+    <string name="charts_desc">Grafici</string>
+    <string name="insurance_abbr">ASS: </string>
+    <string name="car_tax_abbr">BOLLO: </string>
+    <string name="choose_from_gallery">Scegli da Galleria</string>
+    <string name="use_camera">Usa Foto</string>
+    <string name="add">Aggiungi</string>
+    <string name="no_expenses">NESSUNA SPESA! AGGIUNGI QUALCOSA!</string>
+    <string name="collapse">Contrai</string>
+    <string name="expand">Espandi</string>
+    <string name="date">DATA: </string>
+    <string name="delete_expense">Elimina spesa</string>
+    <string name="total_text">TOTALE: € </string>
+    <string name="price_per_liter_text">PREZZO/L: € </string>
+    <string name="km_text"> KM: </string>
+    <string name="km">km</string>
+
+    <!-- AddRefuelingScreen -->
+    <string name="edit_refueling">Modifica Rifornimento</string>
+    <string name="add_refueling">Aggiungi Rifornimento</string>
+    <string name="back">Indietro</string>
+    <string name="gemini_extracted_data">Dati estratti automaticamente da Gemini AI ✨</string>
+    <string name="liters_hint">Litri (es: 20.5)</string>
+    <string name="total_cost_hint">Costo Totale (€)</string>
+    <string name="price_per_liter_hint">Prezzo al Litro (€/L)</string>
+    <string name="current_km">Km Attuali</string>
+    <string name="save_changes">Salva Modifiche</string>
+    <string name="save_expense">Salva Spesa</string>
+
+    <!-- ChartsScreen -->
+    <string name="statistics">STATISTICHE!</string>
+    <string name="no_data_charts">NESSUN DATO! CORRI A FARE BENZINA!</string>
+    <string name="price_trend">ANDAMENTO PREZZO (€/L)</string>
+    <string name="monthly_total_expense">SPESA TOTALE PER MESE (€)</string>
+    <string name="monthly_km">KM PERCORSI PER MESE</string>
+</resources>

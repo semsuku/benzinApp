@@ -19,6 +19,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.benzinapp.ui.MainViewModel
+import androidx.compose.ui.res.stringResource
+import com.example.benzinapp.R
 import com.example.benzinapp.ui.theme.ComicBlack
 import com.example.benzinapp.ui.theme.ComicYellow
 import com.example.benzinapp.ui.theme.LightBlueSky
@@ -85,14 +87,14 @@ fun ChartsScreen(
                 ),
                 title = {
                     Text(
-                        "STATISTICHE!",
+                        stringResource(R.string.statistics),
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 2.sp
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Indietro", tint = ComicBlack)
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back), tint = ComicBlack)
                     }
                 }
             )
@@ -113,7 +115,7 @@ fun ChartsScreen(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Text(
-                        "NESSUN DATO! CORRI A FARE BENZINA!",
+                        stringResource(R.string.no_data_charts),
                         modifier = Modifier.padding(16.dp),
                         fontWeight = FontWeight.Bold,
                         color = ComicBlack
@@ -121,7 +123,7 @@ fun ChartsScreen(
                 }
             } else {
                 // Grafico Prezzo (Vico line chart)
-                ComicChartCard(title = "ANDAMENTO PREZZO (€/L)") {
+                ComicChartCard(title = stringResource(R.string.price_trend)) {
                     if (priceEntries.isNotEmpty()) {
                         Box(modifier = Modifier.height(200.dp)) {
                             Chart(
@@ -142,7 +144,7 @@ fun ChartsScreen(
                 }
 
                 // Grafico Spese Mensili (custom bar chart con etichette dentro)
-                ComicChartCard(title = "SPESA TOTALE PER MESE (€)") {
+                ComicChartCard(title = stringResource(R.string.monthly_total_expense)) {
                     if (monthlyExpenseData.isNotEmpty()) {
                         MonthlyBarChart(
                             data = monthlyExpenseData,
@@ -153,7 +155,7 @@ fun ChartsScreen(
                 }
 
                 // Grafico KM Mensili (custom bar chart con etichette dentro)
-                ComicChartCard(title = "KM PERCORSI PER MESE") {
+                ComicChartCard(title = stringResource(R.string.monthly_km)) {
                     if (monthlyKmData.isNotEmpty()) {
                         MonthlyBarChart(
                             data = monthlyKmData,

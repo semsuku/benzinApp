@@ -19,8 +19,12 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.TireRepair
+import androidx.compose.material.icons.filled.OilBarrel
 import androidx.compose.material3.*
+import com.example.benzinapp.ui.components.AdMobBanner
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.example.benzinapp.R
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -61,6 +65,7 @@ fun HomeScreen(
 ) {
     val refuelings by viewModel.refuelings.collectAsState()
     val tireRotationKm by viewModel.tireRotationKm.collectAsState()
+    val oilChangeKm by viewModel.oilChangeKm.collectAsState()
     
     val insuranceExpiryDate by viewModel.insuranceExpiryDate.collectAsState()
     val insuranceAmount by viewModel.insuranceAmount.collectAsState()
@@ -69,6 +74,9 @@ fun HomeScreen(
 
     var showTireDialog by remember { mutableStateOf(false) }
     var tireInput by remember { mutableStateOf("") }
+    
+    var showOilDialog by remember { mutableStateOf(false) }
+    var oilInput by remember { mutableStateOf("") }
 
     var showInsuranceDialog by remember { mutableStateOf(false) }
     var insuranceDateInput by remember { mutableStateOf("") }
@@ -89,13 +97,24 @@ fun HomeScreen(
     if (showTireDialog) {
         AlertDialog(
             onDismissRequest = { showTireDialog = false },
-            title = { Text("Inversione Gomme", fontWeight = FontWeight.Bold) },
+            titleContentColor = ComicBlack,
+            textContentColor = ComicBlack,
+            title = { Text(stringResource(R.string.tire_rotation), fontWeight = FontWeight.Bold, color = ComicBlack) },
             text = {
                 OutlinedTextField(
                     value = tireInput,
                     onValueChange = { tireInput = it },
-                    label = { Text("Inserisci KM per inversione") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    label = { Text(stringResource(R.string.insert_km_for_tire_rotation)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = ComicBlack,
+                        unfocusedTextColor = ComicBlack,
+                        focusedLabelColor = ComicBlack,
+                        unfocusedLabelColor = ComicBlack,
+                        cursorColor = ComicBlack,
+                        focusedBorderColor = ComicBlack,
+                        unfocusedBorderColor = ComicBlack
+                    )
                 )
             },
             confirmButton = {
@@ -108,12 +127,58 @@ fun HomeScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ComicBlue)
                 ) {
-                    Text("Salva", color = ComicBlack, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.save), color = ComicBlack, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showTireDialog = false }) {
-                    Text("Annulla", color = ComicBlack)
+                    Text(stringResource(R.string.cancel), color = ComicBlack)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(12.dp)
+        )
+    }
+
+    if (showOilDialog) {
+        AlertDialog(
+            onDismissRequest = { showOilDialog = false },
+            titleContentColor = ComicBlack,
+            textContentColor = ComicBlack,
+            title = { Text(stringResource(R.string.oil_change), fontWeight = FontWeight.Bold, color = ComicBlack) },
+            text = {
+                OutlinedTextField(
+                    value = oilInput,
+                    onValueChange = { oilInput = it },
+                    label = { Text(stringResource(R.string.insert_km_for_oil_change)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = ComicBlack,
+                        unfocusedTextColor = ComicBlack,
+                        focusedLabelColor = ComicBlack,
+                        unfocusedLabelColor = ComicBlack,
+                        cursorColor = ComicBlack,
+                        focusedBorderColor = ComicBlack,
+                        unfocusedBorderColor = ComicBlack
+                    )
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        oilInput.toIntOrNull()?.let {
+                            viewModel.updateOilChangeKm(it)
+                        }
+                        showOilDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = ComicBlue)
+                ) {
+                    Text(stringResource(R.string.save), color = ComicBlack, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showOilDialog = false }) {
+                    Text(stringResource(R.string.cancel), color = ComicBlack)
                 }
             },
             containerColor = Color.White,
@@ -123,7 +188,7 @@ fun HomeScreen(
 
     if (showInsuranceDialog) {
         MaintenanceDialog(
-            title = "Assicurazione",
+            title = stringResource(R.string.insurance),
             dateValue = insuranceDateInput,
             onDateChange = { insuranceDateInput = it },
             amountValue = insuranceAmountInput,
@@ -140,7 +205,7 @@ fun HomeScreen(
 
     if (showBolloDialog) {
         MaintenanceDialog(
-            title = "Bollo",
+            title = stringResource(R.string.car_tax),
             dateValue = bolloDateInput,
             onDateChange = { bolloDateInput = it },
             amountValue = bolloAmountInput,
@@ -165,7 +230,7 @@ fun HomeScreen(
                 ),
                 title = { 
                     Text(
-                        "BENZIN APP!", 
+                        stringResource(R.string.app_name).uppercase(), 
                         fontWeight = FontWeight.ExtraBold,
                         style = MaterialTheme.typography.headlineMedium,
                         letterSpacing = 2.sp
@@ -173,10 +238,13 @@ fun HomeScreen(
                 },
                 actions = {
                     IconButton(onClick = onNavigateToCharts) {
-                        Icon(Icons.Default.BarChart, contentDescription = "Grafici", tint = ComicBlack)
+                        Icon(Icons.Default.BarChart, contentDescription = stringResource(R.string.charts_desc), tint = ComicBlack)
                     }
                 }
             )
+        },
+        bottomBar = {
+            AdMobBanner()
         },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End) {
@@ -212,7 +280,7 @@ fun HomeScreen(
                             Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "ASS: ${formatMillis(insuranceExpiryDate)}",
+                                text = "${stringResource(R.string.insurance_abbr)}${formatMillis(insuranceExpiryDate)}",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp
                             )
@@ -245,7 +313,7 @@ fun HomeScreen(
                             Icon(Icons.Default.ReceiptLong, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "BOLLO: ${formatMillis(bolloExpiryDate)}",
+                                text = "${stringResource(R.string.car_tax_abbr)}${formatMillis(bolloExpiryDate)}",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp
                             )
@@ -255,7 +323,7 @@ fun HomeScreen(
                     val latestKm = refuelings.firstOrNull()?.currentKm ?: 0
                     val isTireRotationNeeded = tireRotationKm != null && latestKm >= tireRotationKm!!
                     val tireColor = if (isTireRotationNeeded) ComicRed else ComicGreen
-
+ 
                     // Bottone Inversione Gomme
                     SmallFloatingActionButton(
                         onClick = {
@@ -266,6 +334,7 @@ fun HomeScreen(
                         contentColor = ComicBlack,
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier
+                            .padding(end = 8.dp)
                             .border(3.dp, ComicBlack, RoundedCornerShape(8.dp))
                     ) {
                         Row(
@@ -274,13 +343,49 @@ fun HomeScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.TireRepair,
-                                contentDescription = "Inversione Gomme",
+                                contentDescription = stringResource(R.string.tire_rotation),
                                 modifier = Modifier.size(20.dp)
                             )
                             if (tireRotationKm != null) {
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "${tireRotationKm}km",
+                                    text = "${tireRotationKm}${stringResource(R.string.km)}",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp,
+                                    color = ComicBlack
+                                )
+                            }
+                        }
+                    }
+
+                    // Bottone Cambio Olio
+                    val isOilChangeNeeded = oilChangeKm != null && latestKm >= oilChangeKm!!
+                    val oilColor = if (isOilChangeNeeded) ComicRed else ComicGreen
+
+                    SmallFloatingActionButton(
+                        onClick = {
+                            oilInput = oilChangeKm?.toString() ?: ""
+                            showOilDialog = true 
+                        },
+                        containerColor = oilColor,
+                        contentColor = ComicBlack,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .border(3.dp, ComicBlack, RoundedCornerShape(8.dp))
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.OilBarrel,
+                                contentDescription = stringResource(R.string.oil_change),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            if (oilChangeKm != null) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "${oilChangeKm}${stringResource(R.string.km)}",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 11.sp,
                                     color = ComicBlack
@@ -306,7 +411,7 @@ fun HomeScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.PhotoLibrary,
-                            contentDescription = "Scegli da Galleria",
+                            contentDescription = stringResource(R.string.choose_from_gallery),
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -323,7 +428,7 @@ fun HomeScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.CameraAlt, 
-                            contentDescription = "Usa Foto",
+                            contentDescription = stringResource(R.string.use_camera),
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -339,7 +444,7 @@ fun HomeScreen(
                             onClick = onNavigateToAdd,
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "Aggiungi", tint = ComicBlack, modifier = Modifier.size(32.dp))
+                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add), tint = ComicBlack, modifier = Modifier.size(32.dp))
                         }
                     }
                 }
@@ -361,7 +466,7 @@ fun HomeScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Text(
-                            "NESSUNA SPESA! AGGIUNGI QUALCOSA!",
+                            stringResource(R.string.no_expenses),
                             modifier = Modifier.padding(16.dp),
                             fontWeight = FontWeight.Bold,
                             color = ComicBlack
@@ -393,7 +498,7 @@ fun HomeScreen(
                                 )
                                 Icon(
                                     imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    contentDescription = if (isExpanded) "Contrai" else "Espandi",
+                                    contentDescription = if (isExpanded) stringResource(R.string.collapse) else stringResource(R.string.expand),
                                     tint = ComicBlack
                                 )
                             }
@@ -438,7 +543,7 @@ fun RefuelingCard(refueling: Refueling, onDelete: () -> Unit, onEdit: () -> Unit
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "DATA: $dateString", 
+                    text = "${stringResource(R.string.date)}$dateString", 
                     fontWeight = FontWeight.ExtraBold,
                     style = MaterialTheme.typography.labelLarge,
                     color = ComicBlack
@@ -446,7 +551,7 @@ fun RefuelingCard(refueling: Refueling, onDelete: () -> Unit, onEdit: () -> Unit
                 IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Elimina spesa",
+                        contentDescription = stringResource(R.string.delete_expense),
                         tint = ComicBlack
                     )
                 }
@@ -457,7 +562,7 @@ fun RefuelingCard(refueling: Refueling, onDelete: () -> Unit, onEdit: () -> Unit
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "TOTALE: € ${String.format(Locale.US, "%.2f", refueling.totalPrice)}",
+                    text = "${stringResource(R.string.total_text)}${String.format(Locale.US, "%.2f", refueling.totalPrice)}",
                     fontWeight = FontWeight.Black,
                     style = MaterialTheme.typography.titleLarge,
                     color = ComicBlack
@@ -475,7 +580,7 @@ fun RefuelingCard(refueling: Refueling, onDelete: () -> Unit, onEdit: () -> Unit
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "PREZZO/L: € ${String.format(Locale.US, "%.3f", refueling.pricePerLiter)}", 
+                    text = "${stringResource(R.string.price_per_liter_text)}${String.format(Locale.US, "%.3f", refueling.pricePerLiter)}", 
                     fontWeight = FontWeight.Bold,
                     color = ComicBlack
                 )
@@ -488,7 +593,7 @@ fun RefuelingCard(refueling: Refueling, onDelete: () -> Unit, onEdit: () -> Unit
                     modifier = Modifier.padding(top = 4.dp)
                 ) {
                     Text(
-                        text = " KM: ${refueling.currentKm} ${if (refueling.kmDrivenSinceLast > 0) "(+${refueling.kmDrivenSinceLast}) " else " "}",
+                        text = "${stringResource(R.string.km_text)}${refueling.currentKm} ${if (refueling.kmDrivenSinceLast > 0) "(+${refueling.kmDrivenSinceLast}) " else " "}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color.White,
@@ -512,22 +617,42 @@ fun MaintenanceDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Bold) },
+        titleContentColor = ComicBlack,
+        textContentColor = ComicBlack,
+        title = { Text(title, fontWeight = FontWeight.Bold, color = ComicBlack) },
         text = {
             Column {
                 OutlinedTextField(
                     value = dateValue,
                     onValueChange = onDateChange,
-                    label = { Text("Data Scadenza (gg/mm/aaaa)") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text(stringResource(R.string.expiry_date)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = ComicBlack,
+                        unfocusedTextColor = ComicBlack,
+                        focusedLabelColor = ComicBlack,
+                        unfocusedLabelColor = ComicBlack,
+                        cursorColor = ComicBlack,
+                        focusedBorderColor = ComicBlack,
+                        unfocusedBorderColor = ComicBlack
+                    )
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = amountValue,
                     onValueChange = onAmountChange,
-                    label = { Text("Importo (€)") },
+                    label = { Text(stringResource(R.string.amount)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = ComicBlack,
+                        unfocusedTextColor = ComicBlack,
+                        focusedLabelColor = ComicBlack,
+                        unfocusedLabelColor = ComicBlack,
+                        cursorColor = ComicBlack,
+                        focusedBorderColor = ComicBlack,
+                        unfocusedBorderColor = ComicBlack
+                    )
                 )
             }
         },
@@ -536,12 +661,12 @@ fun MaintenanceDialog(
                 onClick = onSave,
                 colors = ButtonDefaults.buttonColors(containerColor = ComicBlue)
             ) {
-                Text("Salva", color = ComicBlack, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.save), color = ComicBlack, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annulla", color = ComicBlack)
+                Text(stringResource(R.string.cancel), color = ComicBlack)
             }
         },
         containerColor = Color.White,

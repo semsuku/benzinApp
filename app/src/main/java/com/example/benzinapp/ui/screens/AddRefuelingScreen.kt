@@ -11,6 +11,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.benzinapp.data.Refueling
 import com.example.benzinapp.ui.MainViewModel
+import androidx.compose.ui.res.stringResource
+import com.example.benzinapp.R
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,10 +43,10 @@ fun AddRefuelingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (refuelingToEdit != null) "Modifica Rifornimento" else "Aggiungi Rifornimento") },
+                title = { Text(if (refuelingToEdit != null) stringResource(R.string.edit_refueling) else stringResource(R.string.add_refueling)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -59,7 +61,7 @@ fun AddRefuelingScreen(
         ) {
             if (initialLiters != null || initialTotalPrice != null || initialKm != null) {
                 Text(
-                    text = "Dati estratti automaticamente da Gemini AI ✨",
+                    text = stringResource(R.string.gemini_extracted_data),
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -69,7 +71,7 @@ fun AddRefuelingScreen(
             OutlinedTextField(
                 value = litersStr,
                 onValueChange = { litersStr = it },
-                label = { Text("Litri (es: 20.5)") },
+                label = { Text(stringResource(R.string.liters_hint)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -77,7 +79,7 @@ fun AddRefuelingScreen(
             OutlinedTextField(
                 value = totalPriceStr,
                 onValueChange = { totalPriceStr = it },
-                label = { Text("Costo Totale (€)") },
+                label = { Text(stringResource(R.string.total_cost_hint)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -85,7 +87,7 @@ fun AddRefuelingScreen(
             OutlinedTextField(
                 value = pricePerLiterStr,
                 onValueChange = { /* Non editabile */ },
-                label = { Text("Prezzo al Litro (€/L)") },
+                label = { Text(stringResource(R.string.price_per_liter_hint)) },
                 readOnly = true,
                 enabled = false,
                 modifier = Modifier.fillMaxWidth()
@@ -94,7 +96,7 @@ fun AddRefuelingScreen(
             OutlinedTextField(
                 value = currentKmStr,
                 onValueChange = { currentKmStr = it },
-                label = { Text("Km Attuali") },
+                label = { Text(stringResource(R.string.current_km)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -133,7 +135,7 @@ fun AddRefuelingScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = litersStr.isNotBlank() && totalPriceStr.isNotBlank() && pricePerLiterStr.isNotBlank()
             ) {
-                Text(if (refuelingToEdit != null) "Salva Modifiche" else "Salva Spesa")
+                Text(if (refuelingToEdit != null) stringResource(R.string.save_changes) else stringResource(R.string.save_expense))
             }
         }
     }

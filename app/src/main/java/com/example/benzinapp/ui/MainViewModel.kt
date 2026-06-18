@@ -28,6 +28,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val tireRotationKm: StateFlow<Int?> = _tireRotationKm.asStateFlow()
 
+    private val _oilChangeKm = MutableStateFlow<Int?>(
+        if (sharedPrefs.contains("oil_change_km")) sharedPrefs.getInt("oil_change_km", 0) else null
+    )
+    val oilChangeKm: StateFlow<Int?> = _oilChangeKm.asStateFlow()
+
     private val _insuranceExpiryDate = MutableStateFlow<Long?>(
         if (sharedPrefs.contains("insurance_expiry_date")) sharedPrefs.getLong("insurance_expiry_date", 0) else null
     )
@@ -65,6 +70,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateTireRotationKm(km: Int) {
         sharedPrefs.edit().putInt("tire_rotation_km", km).apply()
         _tireRotationKm.value = km
+    }
+
+    fun updateOilChangeKm(km: Int) {
+        sharedPrefs.edit().putInt("oil_change_km", km).apply()
+        _oilChangeKm.value = km
     }
 
     fun updateInsurance(expiry: Long?, amount: Double) {
@@ -123,6 +133,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (rotationThreshold != null && currentKm >= rotationThreshold) {
                 sendTireRotationNotification()
             }
+
+            val oilThreshold = _oilChangeKm.value
+            if (oilThreshold != null && currentKm >= oilThreshold) {
+                sendOilChangeNotification()
+            }
         }
     }
 
@@ -138,6 +153,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             with(NotificationManagerCompat.from(context)) {
                 notify(1001, builder.build())
+            }
+        } catch (e: SecurityException) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun sendOilChangeNotification() {
+        val context = getApplication<Application>()
+        try {
+            val builder = NotificationCompat.Builder(context, "maintenance_channel")
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle("Cambio Olio Necessario!")
+                .setContentText("Hai raggiunto i km impostati per il cambio dell'olio.")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+
+            with(NotificationManagerCompat.from(context)) {
+                notify(1002, builder.build())
             }
         } catch (e: SecurityException) {
             e.printStackTrace()

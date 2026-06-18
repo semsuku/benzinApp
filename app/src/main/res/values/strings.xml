@@ -1,3 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">BenzinApp</string>
+    
+    <!-- HomeScreen -->
+    <string name="tire_rotation">Tire Rotation</string>
+    <string name="insert_km_for_tire_rotation">Enter KM for tire rotation</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="oil_change">Oil Change</string>
+    <string name="insert_km_for_oil_change">Enter KM for oil change</string>
+    <string name="insurance">Insurance</string>
+    <string name="expiry_date">Expiry Date (dd/mm/yyyy)</string>
+    <string name="amount">Amount (€)</string>
+    <string name="car_tax">Car Tax</string>
+    <string name="charts_desc">Charts</string>
+    <string name="insurance_abbr">INS: </string>
+    <string name="car_tax_abbr">TAX: </string>
+    <string name="choose_from_gallery">Choose from Gallery</string>
+    <string name="use_camera">Use Camera</string>
+    <string name="add">Add</string>
+    <string name="no_expenses">NO EXPENSES! ADD SOMETHING!</string>
+    <string name="collapse">Collapse</string>
+    <string name="expand">Expand</string>
+    <string name="date">DATE: </string>
+    <string name="delete_expense">Delete expense</string>
+    <string name="total_text">TOTAL: € </string>
+    <string name="price_per_liter_text">PRICE/L: € </string>
+    <string name="km_text"> KM: </string>
+    <string name="km">km</string>
+
+    <!-- AddRefuelingScreen -->
+    <string name="edit_refueling">Edit Refueling</string>
+    <string name="add_refueling">Add Refueling</string>
+    <string name="back">Back</string>
+    <string name="gemini_extracted_data">Data automatically extracted by Gemini AI ✨</string>
+    <string name="liters_hint">Liters (e.g., 20.5)</string>
+    <string name="total_cost_hint">Total Cost (€)</string>
+    <string name="price_per_liter_hint">Price per Liter (€/L)</string>
+    <string name="current_km">Current Km</string>
+    <string name="save_changes">Save Changes</string>
+    <string name="save_expense">Save Expense</string>
+
+    <!-- ChartsScreen -->
+    <string name="statistics">STATISTICS!</string>
+    <string name="no_data_charts">NO DATA! HURRY UP AND REFUEL!</string>
+    <string name="price_trend">PRICE TREND (€/L)</string>
+    <string name="monthly_total_expense">TOTAL MONTHLY EXPENSE (€)</string>
+    <string name="monthly_km">KM DRIVEN PER MONTH</string>
 </resources>
