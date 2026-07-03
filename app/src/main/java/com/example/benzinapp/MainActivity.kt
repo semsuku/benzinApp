@@ -99,7 +99,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // Initialize AdMob Mobile Ads SDK
-        com.google.android.gms.ads.MobileAds.initialize(this) {}
+        // com.google.android.gms.ads.MobileAds.initialize(this) {}
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             val requestPermissionLauncher = registerForActivityResult(

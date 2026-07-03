@@ -243,9 +243,9 @@ fun HomeScreen(
                 }
             )
         },
-        bottomBar = {
-            AdMobBanner()
-        },
+        // bottomBar = {
+        //     AdMobBanner()
+        // },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End) {
                 Row(
