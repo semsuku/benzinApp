@@ -16,6 +16,10 @@
     <string name="charts_desc">Grafici</string>
     <string name="insurance_abbr">ASS: </string>
     <string name="car_tax_abbr">BOLLO: </string>
+    <string name="revisione">Revisione</string>
+    <string name="revisione_abbr">REV: </string>
+    <string name="last_revision_date">Data Ultima Revisione o Immatricolazione</string>
+    <string name="is_new_car">Auto nuova (prima revisione a 4 anni)</string>
     <string name="choose_from_gallery">Scegli da Galleria</string>
     <string name="use_camera">Usa Foto</string>
     <string name="add">Aggiungi</string>

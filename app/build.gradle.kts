@@ -12,8 +12,10 @@ val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
-val rawApiKey = localProperties.getProperty("GEMINI_API_KEY") ?: ""
-val cleanApiKey = rawApiKey.trim().replace("\"", "").replace("'", "")
+val backendBaseUrl = localProperties.getProperty("BACKEND_BASE_URL") ?: "https://api.semsuku.uk/"
+val backendApiKey = localProperties.getProperty("BACKEND_API_KEY") ?: "benzinapp_secret_key_123"
+val cleanBaseUrl = backendBaseUrl.trim().replace("\"", "").replace("'", "")
+val cleanBackendKey = backendApiKey.trim().replace("\"", "").replace("'", "")
 
 android {
     namespace = "com.example.benzinapp"
@@ -23,12 +25,13 @@ android {
         applicationId = "com.franc.benzinapp"
         minSdk = 24
         targetSdk = 35
-        versionCode = 4
+        versionCode = 5
         versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
-        buildConfigField("String", "GEMINI_API_KEY", "\"$cleanApiKey\"")
+        buildConfigField("String", "BACKEND_BASE_URL", "\"$cleanBaseUrl\"")
+        buildConfigField("String", "BACKEND_API_KEY", "\"$cleanBackendKey\"")
     }
 
     signingConfigs {
@@ -87,6 +90,12 @@ dependencies {
 
     // Generative AI (Gemini)
     implementation(libs.google.generativeai)
+
+    // Retrofit & OkHttp
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.core)
+    implementation(libs.okhttp.logging)
 
     // Vico Compose
     implementation(libs.vico.compose)

@@ -1,6 +1,7 @@
 package com.example.benzinapp.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -28,6 +29,18 @@ fun AddRefuelingScreen(
     var litersStr by remember { mutableStateOf(refuelingToEdit?.liters?.toString() ?: initialLiters?.toString() ?: "") }
     var totalPriceStr by remember { mutableStateOf(refuelingToEdit?.totalPrice?.toString() ?: initialTotalPrice?.toString() ?: "") }
     var currentKmStr by remember { mutableStateOf(refuelingToEdit?.currentKm?.toString() ?: initialKm?.toString() ?: "") }
+    var dateStr by remember { 
+        mutableStateOf(
+            if (refuelingToEdit != null) {
+                formatMillis(refuelingToEdit.dateMillis)
+            } else {
+                formatMillis(System.currentTimeMillis())
+            }
+        )
+    }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showOdometerPicker by remember { mutableStateOf(false) }
+    var showMoneyPicker by remember { mutableStateOf(false) }
 
     // Calcolo automatico del prezzo al litro
     val pricePerLiterStr = remember(litersStr, totalPriceStr) {
@@ -68,6 +81,21 @@ fun AddRefuelingScreen(
             }
 
 
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = dateStr,
+                    onValueChange = {},
+                    label = { Text("Data Rifornimento") },
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable { showDatePicker = true }
+                )
+            }
+
             OutlinedTextField(
                 value = litersStr,
                 onValueChange = { litersStr = it },
@@ -76,13 +104,20 @@ fun AddRefuelingScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            OutlinedTextField(
-                value = totalPriceStr,
-                onValueChange = { totalPriceStr = it },
-                label = { Text(stringResource(R.string.total_cost_hint)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
-            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = totalPriceStr,
+                    onValueChange = {},
+                    label = { Text(stringResource(R.string.total_cost_hint)) },
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable { showMoneyPicker = true }
+                )
+            }
 
             OutlinedTextField(
                 value = pricePerLiterStr,
@@ -93,13 +128,20 @@ fun AddRefuelingScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            OutlinedTextField(
-                value = currentKmStr,
-                onValueChange = { currentKmStr = it },
-                label = { Text(stringResource(R.string.current_km)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
-            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = currentKmStr,
+                    onValueChange = {},
+                    label = { Text(stringResource(R.string.current_km)) },
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable { showOdometerPicker = true }
+                )
+            }
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -109,12 +151,13 @@ fun AddRefuelingScreen(
                     val total = totalPriceStr.replace(",", ".").toDoubleOrNull() ?: 0.0
                     val price = pricePerLiterStr.toDoubleOrNull() ?: 0.0
                     val km = currentKmStr.toIntOrNull() ?: 0
-
+                    val parsedDate = parseDate(dateStr) ?: System.currentTimeMillis()
+ 
                     if (liters > 0 && total > 0) {
                         if (refuelingToEdit != null) {
                             viewModel.updateRefueling(
                                 id = refuelingToEdit.id,
-                                dateMillis = refuelingToEdit.dateMillis,
+                                dateMillis = parsedDate,
                                 pricePerLiter = price,
                                 liters = liters,
                                 totalPrice = total,
@@ -122,7 +165,7 @@ fun AddRefuelingScreen(
                             )
                         } else {
                             viewModel.addRefueling(
-                                dateMillis = System.currentTimeMillis(),
+                                dateMillis = parsedDate,
                                 pricePerLiter = price,
                                 liters = liters,
                                 totalPrice = total,
@@ -136,6 +179,35 @@ fun AddRefuelingScreen(
                 enabled = litersStr.isNotBlank() && totalPriceStr.isNotBlank() && pricePerLiterStr.isNotBlank()
             ) {
                 Text(if (refuelingToEdit != null) stringResource(R.string.save_changes) else stringResource(R.string.save_expense))
+            }
+            if (showDatePicker) {
+                DatePickerDialogPicker(
+                    initialSelectedDateMillis = parseDate(dateStr) ?: System.currentTimeMillis(),
+                    onDateSelected = { millis ->
+                        dateStr = formatMillis(millis)
+                    },
+                    onDismiss = { showDatePicker = false }
+                )
+            }
+            if (showOdometerPicker) {
+                OdometerPickerDialog(
+                    initialValue = currentKmStr.toIntOrNull() ?: 0,
+                    title = stringResource(R.string.current_km),
+                    onValueSelected = { valVal ->
+                        currentKmStr = valVal.toString()
+                    },
+                    onDismiss = { showOdometerPicker = false }
+                )
+            }
+            if (showMoneyPicker) {
+                MoneyPickerDialog(
+                    initialValue = totalPriceStr.replace(",", ".").toDoubleOrNull() ?: 0.0,
+                    title = stringResource(R.string.total_cost_hint),
+                    onValueSelected = { valVal ->
+                        totalPriceStr = String.format(Locale.US, "%.2f", valVal)
+                    },
+                    onDismiss = { showMoneyPicker = false }
+                )
             }
         }
     }

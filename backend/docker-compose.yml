@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  benzinapp-api:
+    build: .
+    container_name: benzinapp-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - BACKEND_API_KEY=${BACKEND_API_KEY}
+    volumes:
+      - benzinapp-data:/app/data
+
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare-tunnel
+    restart: unless-stopped
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    command: tunnel --no-autoupdate run
+    depends_on:
+      - benzinapp-api
+
+volumes:
+  benzinapp-data:

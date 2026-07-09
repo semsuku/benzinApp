@@ -23,6 +23,7 @@ import com.example.benzinapp.ui.MainViewModel
 import com.example.benzinapp.ui.screens.AddRefuelingScreen
 import com.example.benzinapp.ui.screens.ChartsScreen
 import com.example.benzinapp.ui.screens.HomeScreen
+import com.example.benzinapp.ui.screens.NearestStationsScreen
 import com.example.benzinapp.ui.theme.BenzinAppTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -219,7 +220,15 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToCharts = {
                                     navController.navigate("charts")
+                                },
+                                onNavigateToStations = {
+                                    navController.navigate("stations")
                                 }
+                            )
+                        }
+                        composable("stations") {
+                            NearestStationsScreen(
+                                onNavigateBack = { navController.popBackStack() }
                             )
                         }
                         composable("add") {

@@ -16,6 +16,10 @@
     <string name="charts_desc">Charts</string>
     <string name="insurance_abbr">INS: </string>
     <string name="car_tax_abbr">TAX: </string>
+    <string name="revisione">Inspection</string>
+    <string name="revisione_abbr">REV: </string>
+    <string name="last_revision_date">Last Inspection or Registration Date</string>
+    <string name="is_new_car">New car (first inspection at 4 years)</string>
     <string name="choose_from_gallery">Choose from Gallery</string>
     <string name="use_camera">Use Camera</string>
     <string name="add">Add</string>
