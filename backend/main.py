@@ -4,11 +4,17 @@ import sqlite3
 import base64
 import json
 import logging
+import threading
+from contextlib import asynccontextmanager
 from typing import List, Optional
 from fastapi import FastAPI, Header, HTTPException, Depends, File, UploadFile, Query
 from pydantic import BaseModel
 import httpx
 from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+from ingest_mimit import run_ingestion
 
 # Load .env variables at startup
 load_dotenv()
@@ -22,7 +28,28 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "benzinapp_secret_key_123")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
-app = FastAPI(title="BenzinApp API", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Initializing APScheduler for MIMIT daily price updates at 08:00 AM...")
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        run_ingestion,
+        CronTrigger(hour=8, minute=0),
+        id="mimit_daily_ingest",
+        replace_existing=True
+    )
+    scheduler.start()
+
+    logger.info("Triggering background MIMIT price ingestion on startup...")
+    threading.Thread(target=run_ingestion, daemon=True).start()
+
+    yield
+
+    logger.info("Shutting down APScheduler...")
+    scheduler.shutdown()
+
+app = FastAPI(title="BenzinApp API", version="1.0.0", lifespan=lifespan)
+
 
 # Security Dependency
 async def verify_api_key(x_api_key: str = Header(...)):
@@ -246,3 +273,9 @@ async def proxy_gemini_extract(
         except json.JSONDecodeError as exc:
             logger.error(f"Gemini response was not a valid JSON string: {exc} | Raw content: {cleaned_text}")
             raise HTTPException(status_code=502, detail="Failed to parse Gemini result into structured JSON")
+
+@app.post("/api/v1/admin/ingest", dependencies=[Depends(verify_api_key)])
+async def trigger_admin_ingestion():
+    threading.Thread(target=run_ingestion, daemon=True).start()
+    return {"status": "started", "message": "Manual MIMIT price ingestion triggered in background"}
+
