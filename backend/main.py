@@ -26,7 +26,7 @@ logger = logging.getLogger("benzinapp-api")
 DB_PATH = os.getenv("DB_PATH", "/app/data/fuel.db")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "benzinapp_secret_key_123")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -215,9 +215,12 @@ async def proxy_gemini_extract(
         logger.error(f"Error reading uploaded file: {e}")
         raise HTTPException(status_code=400, detail="Failed to read uploaded image")
 
-    # 3. Call Google Gemini REST API using httpx (asynchronous client)
-    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
-    
+    # 3. Call Google Gemini REST API using httpx with model fallback
+    models_to_try = [GEMINI_MODEL]
+    for fallback_m in ["gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.1-flash-lite"]:
+        if fallback_m not in models_to_try:
+            models_to_try.append(fallback_m)
+
     payload = {
         "contents": [
             {
@@ -235,44 +238,32 @@ async def proxy_gemini_extract(
     }
 
     async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(gemini_url, json=payload, timeout=30.0)
-            
-            if response.status_code != 200:
-                logger.error(f"Gemini API returned status {response.status_code}: {response.text}")
-                raise HTTPException(status_code=502, detail="Error communicating with Gemini API")
+        for model_name in models_to_try:
+            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+            try:
+                logger.info(f"Calling Gemini API with model: {model_name}")
+                response = await client.post(gemini_url, json=payload, timeout=30.0)
                 
-            response_json = response.json()
-            
-            # Extract content from response
-            candidates = response_json.get("candidates", [])
-            if not candidates:
-                logger.warning(f"No candidates returned in Gemini response: {response_json}")
-                raise HTTPException(status_code=502, detail="Gemini returned an empty result")
-                
-            raw_text = candidates[0]["content"]["parts"][0]["text"].strip()
-            
-            # Clean markdown JSON block formatting if present
-            cleaned_text = raw_text
-            if cleaned_text.startswith("```json"):
-                cleaned_text = cleaned_text[7:]
-            if cleaned_text.endswith("```"):
-                cleaned_text = cleaned_text[:-3]
-            cleaned_text = cleaned_text.strip()
-            
-            # Parse text into JSON before returning to ensure structured format
-            parsed_data = json.loads(cleaned_text)
-            return parsed_data
-            
-        except httpx.RequestError as exc:
-            logger.error(f"HTTP request to Gemini failed: {exc}")
-            raise HTTPException(status_code=502, detail="Connection to Gemini API failed")
-        except (KeyError, IndexError) as exc:
-            logger.error(f"Failed parsing Gemini API response format: {exc}")
-            raise HTTPException(status_code=502, detail="Invalid response structure from Gemini API")
-        except json.JSONDecodeError as exc:
-            logger.error(f"Gemini response was not a valid JSON string: {exc} | Raw content: {cleaned_text}")
-            raise HTTPException(status_code=502, detail="Failed to parse Gemini result into structured JSON")
+                if response.status_code == 200:
+                    response_json = response.json()
+                    candidates = response_json.get("candidates", [])
+                    if candidates:
+                        raw_text = candidates[0]["content"]["parts"][0]["text"].strip()
+                        cleaned_text = raw_text
+                        if cleaned_text.startswith("```json"):
+                            cleaned_text = cleaned_text[7:]
+                        if cleaned_text.endswith("```"):
+                            cleaned_text = cleaned_text[:-3]
+                        cleaned_text = cleaned_text.strip()
+                        if "{" in cleaned_text and "}" in cleaned_text:
+                            cleaned_text = cleaned_text[cleaned_text.find("{"):cleaned_text.rfind("}")+1]
+                        return json.loads(cleaned_text)
+                else:
+                    logger.warning(f"Gemini API model '{model_name}' returned status {response.status_code}: {response.text}")
+            except Exception as exc:
+                logger.warning(f"Error calling Gemini API model '{model_name}': {exc}")
+
+        raise HTTPException(status_code=502, detail="All Gemini API models failed to process image")
 
 @app.post("/api/v1/admin/ingest", dependencies=[Depends(verify_api_key)])
 async def trigger_admin_ingestion():
