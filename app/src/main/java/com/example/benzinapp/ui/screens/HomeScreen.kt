@@ -31,6 +31,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.material3.*
 import com.example.benzinapp.ui.components.AdMobBanner
+import com.example.benzinapp.ui.components.ProfileSelector
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.example.benzinapp.R
@@ -73,6 +74,8 @@ fun HomeScreen(
     onNavigateToCharts: () -> Unit,
     onNavigateToStations: () -> Unit
 ) {
+    val profiles by viewModel.profiles.collectAsState()
+    val activeProfileId by viewModel.activeProfileId.collectAsState()
     val refuelings by viewModel.refuelings.collectAsState()
     val tireRotationKm by viewModel.tireRotationKm.collectAsState()
     val tireChangeDate by viewModel.tireChangeDate.collectAsState()
@@ -830,6 +833,17 @@ fun HomeScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            item {
+                ProfileSelector(
+                    profiles = profiles,
+                    activeProfileId = activeProfileId,
+                    onSelectProfile = { id -> viewModel.setActiveProfile(id) },
+                    onAddProfile = { name, vehicle, icon, color -> viewModel.addProfile(name, vehicle, icon, color) },
+                    onEditProfile = { profile -> viewModel.updateProfile(profile) },
+                    onDeleteProfile = { profile -> viewModel.deleteProfile(profile) }
+                )
+            }
+
             if (refuelings.isEmpty()) {
                 item {
                     Card(

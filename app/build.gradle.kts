@@ -19,14 +19,14 @@ val cleanBackendKey = backendApiKey.trim().replace("\"", "").replace("'", "")
 
 android {
     namespace = "com.example.benzinapp"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.franc.benzinapp"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 6
-        versionName = "1.2"
+        targetSdk = 36
+        versionCode = 8
+        versionName = "1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         

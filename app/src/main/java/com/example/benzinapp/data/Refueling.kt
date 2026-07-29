@@ -12,5 +12,6 @@ data class Refueling(
     val liters: Double,            // Litri di carburante erogati
     val totalPrice: Double,        // Costo totale
     val currentKm: Int,            // Chilometraggio attuale del veicolo
-    val kmDrivenSinceLast: Int     // Chilometri percorsi dall'ultimo rifornimento
+    val kmDrivenSinceLast: Int,    // Chilometri percorsi dall'ultimo rifornimento
+    val profileId: Long = 1        // ID del profilo associato
 )
