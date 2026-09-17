@@ -77,6 +77,26 @@ fun ChartsScreen(
         Pair(label, value)
     }
 
+    // 4. Calcolo Consumo Medio (km/l)
+    val validConsumptionRefuelings = sortedByDate.filter { it.kmDrivenSinceLast > 0 && it.liters > 0 }
+    val consumptionEntries = validConsumptionRefuelings.mapIndexed { index, ref ->
+        FloatEntry(x = index.toFloat(), y = (ref.kmDrivenSinceLast.toDouble() / ref.liters).toFloat())
+    }
+    val totalKmTracked = validConsumptionRefuelings.sumOf { it.kmDrivenSinceLast }
+    val totalLitersTracked = validConsumptionRefuelings.sumOf { it.liters }
+    val overallAvgConsumption = if (totalLitersTracked > 0) totalKmTracked.toDouble() / totalLitersTracked else 0.0
+
+    val monthlyConsumptionData = monthlyGroups.entries.mapNotNull { (timeMillis, list) ->
+        val monthKm = list.sumOf { it.kmDrivenSinceLast }
+        val monthLiters = list.sumOf { it.liters }
+        if (monthKm > 0 && monthLiters > 0) {
+            val label = SimpleDateFormat("MMM\nyyyy", Locale.getDefault()).format(Date(timeMillis)).uppercase()
+            Pair(label, monthKm.toDouble() / monthLiters)
+        } else {
+            null
+        }
+    }
+
     Scaffold(
         containerColor = LightBlueSky,
         topBar = {
@@ -122,6 +142,88 @@ fun ChartsScreen(
                     )
                 }
             } else {
+                // Grafico Consumo Medio (km/l)
+                ComicChartCard(title = stringResource(R.string.consumption_trend)) {
+                    if (validConsumptionRefuelings.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.insufficient_data_consumption),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ComicBlack
+                        )
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            // Badge Media Globale
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color.White,
+                                border = BorderStroke(2.dp, ComicBlack),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.overall_avg_consumption),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ComicBlack
+                                    )
+                                    Text(
+                                        text = "${String.format(Locale.US, "%.1f", overallAvgConsumption)} km/l",
+                                        fontSize = 17.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color(0xFFE65100)
+                                    )
+                                }
+                            }
+
+                            // Grafico ad andamento continuo tra i rifornimenti
+                            if (consumptionEntries.isNotEmpty()) {
+                                Text(
+                                    text = "ANDAMENTO PER RIFORNIMENTO",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = ComicBlack
+                                )
+                                Box(modifier = Modifier.height(190.dp)) {
+                                    Chart(
+                                        chart = lineChart(
+                                            lines = listOf(
+                                                LineChart.LineSpec(
+                                                    lineColor = android.graphics.Color.rgb(230, 81, 0),
+                                                    lineThicknessDp = 3f
+                                                )
+                                            )
+                                        ),
+                                        model = entryModelOf(consumptionEntries),
+                                        startAxis = rememberStartAxis(),
+                                        bottomAxis = rememberBottomAxis()
+                                    )
+                                }
+                            }
+
+                            // Grafico a barre per il consumo medio mensile
+                            if (monthlyConsumptionData.isNotEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.monthly_avg_consumption),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = ComicBlack,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                                MonthlyBarChart(
+                                    data = monthlyConsumptionData,
+                                    labelFormatter = { value -> "${String.format(Locale.US, "%.1f", value)} km/l" },
+                                    barColor = Color(0xFFFF9800)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Grafico Prezzo (Vico line chart)
                 ComicChartCard(title = stringResource(R.string.price_trend)) {
                     if (priceEntries.isNotEmpty()) {

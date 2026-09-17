@@ -25,8 +25,8 @@ android {
         applicationId = "com.franc.benzinapp"
         minSdk = 24
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.3"
+        versionCode = 11
+        versionName = "1.5.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         

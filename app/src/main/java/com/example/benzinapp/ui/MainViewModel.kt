@@ -12,9 +12,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.benzinapp.data.AppDatabase
 import com.example.benzinapp.data.Profile
 import com.example.benzinapp.data.Refueling
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Locale
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -602,5 +605,230 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun formatDate(millis: Long): String {
         val sdf = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault())
         return sdf.format(java.util.Date(millis))
+    }
+
+    fun importRefuelingsFromCsv(
+        uri: android.net.Uri,
+        replaceExisting: Boolean,
+        onResult: (success: Boolean, count: Int, message: String?) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val context = getApplication<Application>()
+            try {
+                val lines = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    inputStream.bufferedReader(Charsets.UTF_8).readLines()
+                } ?: emptyList()
+
+                if (lines.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        onResult(false, 0, "File vuoto")
+                    }
+                    return@launch
+                }
+
+                val pId = activeProfileId.value
+                val dateFormats = listOf(
+                    java.text.SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).apply { isLenient = false },
+                    java.text.SimpleDateFormat("dd/MM/yyyy", Locale.US).apply { isLenient = false },
+                    java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).apply { isLenient = false },
+                    java.text.SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).apply { isLenient = false }
+                )
+
+                fun parseDate(str: String): Long? {
+                    val clean = str.trim().removePrefix("\uFEFF")
+                    for (fmt in dateFormats) {
+                        try {
+                            val parsed = fmt.parse(clean)
+                            if (parsed != null) {
+                                val cal = java.util.Calendar.getInstance().apply { time = parsed }
+                                if (cal.get(java.util.Calendar.YEAR) >= 1990) {
+                                    return parsed.time
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
+                    val longVal = clean.toLongOrNull()
+                    if (longVal != null && longVal > 946684800000L) { // > 01/01/2000
+                        return longVal
+                    }
+                    return null
+                }
+
+                fun parseDouble(str: String): Double {
+                    return str.trim().replace(",", ".").toDoubleOrNull() ?: 0.0
+                }
+
+                fun parseInt(str: String): Int {
+                    val clean = str.trim().replace(".", "").replace(",", "").replace(" ", "")
+                    return clean.toIntOrNull() ?: 0
+                }
+
+                data class RawRefueling(
+                    val dateMillis: Long,
+                    val currentKm: Int,
+                    val liters: Double,
+                    val pricePerLiter: Double,
+                    val totalPrice: Double
+                )
+
+                val parsedList = mutableListOf<RawRefueling>()
+                var readingDetails = false
+                var readingMaintenance = false
+
+                for (line in lines) {
+                    val trimmed = line.trim().removePrefix("\uFEFF")
+                    if (trimmed.isEmpty()) continue
+
+                    val delimiter = if (trimmed.contains(";")) ";" else ","
+
+                    if (trimmed.contains("SINTESI COSTI", ignoreCase = true)) {
+                        readingDetails = false
+                        readingMaintenance = false
+                        continue
+                    }
+                    if (trimmed.contains("DETTAGLIO SINGOLI RIFORNIMENTI", ignoreCase = true)) {
+                        readingDetails = true
+                        readingMaintenance = false
+                        continue
+                    }
+                    if (trimmed.contains("DETTAGLIO SCADENZE", ignoreCase = true) ||
+                        trimmed.contains("SCADENZE E MANUTENZIONE", ignoreCase = true)) {
+                        readingDetails = false
+                        readingMaintenance = true
+                        continue
+                    }
+
+                    if (readingMaintenance) {
+                        val parts = trimmed.split(delimiter)
+                        if (parts.size >= 2) {
+                            val key = parts[0].trim()
+                            val value = parts[1].trim()
+                            when (key) {
+                                "INSURANCE_EXPIRY" -> parseDate(value)?.let { sharedPrefs.edit().putLong(prefKey(pId, "insurance_expiry_date"), it).apply() }
+                                "INSURANCE_AMOUNT" -> sharedPrefs.edit().putFloat(prefKey(pId, "insurance_amount"), parseDouble(value).toFloat()).apply()
+                                "INSURANCE_COMPANY" -> sharedPrefs.edit().putString(prefKey(pId, "insurance_company"), value).apply()
+                                "BOLLO_EXPIRY" -> parseDate(value)?.let { sharedPrefs.edit().putLong(prefKey(pId, "bollo_expiry_date"), it).apply() }
+                                "BOLLO_AMOUNT" -> sharedPrefs.edit().putFloat(prefKey(pId, "bollo_amount"), parseDouble(value).toFloat()).apply()
+                                "REVISIONE_LAST" -> parseDate(value)?.let { sharedPrefs.edit().putLong(prefKey(pId, "revisione_last_date"), it).apply() }
+                                "REVISIONE_AMOUNT" -> sharedPrefs.edit().putFloat(prefKey(pId, "revisione_amount"), parseDouble(value).toFloat()).apply()
+                                "OIL_LAST_DATE" -> parseDate(value)?.let { sharedPrefs.edit().putLong(prefKey(pId, "oil_last_date"), it).apply() }
+                                "OIL_LAST_KM" -> sharedPrefs.edit().putInt(prefKey(pId, "oil_last_km"), parseInt(value)).apply()
+                                "OIL_INTERVAL_KM" -> sharedPrefs.edit().putInt(prefKey(pId, "oil_interval_km"), parseInt(value)).apply()
+                                "OIL_INTERVAL_MONTHS" -> sharedPrefs.edit().putInt(prefKey(pId, "oil_interval_months"), parseInt(value)).apply()
+                                "TIRE_DATE" -> parseDate(value)?.let { sharedPrefs.edit().putLong(prefKey(pId, "tire_change_date"), it).apply() }
+                                "TIRE_KM" -> sharedPrefs.edit().putInt(prefKey(pId, "tire_change_km"), parseInt(value)).apply()
+                                "TIRE_ROTATION_KM" -> sharedPrefs.edit().putInt(prefKey(pId, "tire_rotation_km"), parseInt(value)).apply()
+                            }
+                        }
+                        continue
+                    }
+
+                    val parts = trimmed.split(delimiter)
+                    if (parts.size >= 5) {
+                        val firstCol = parts[0].trim()
+                        if (firstCol.equals("Data", ignoreCase = true) || firstCol.equals("Date", ignoreCase = true)) {
+                            readingDetails = true
+                            continue
+                        }
+                        if (readingDetails) {
+                            val dateMillis = parseDate(firstCol)
+                            if (dateMillis != null) {
+                                val km = parseInt(parts[1])
+                                val liters = parseDouble(parts[2])
+                                val pricePerLiter = parseDouble(parts[3])
+                                val totalPrice = parseDouble(parts[4])
+                                if (liters > 0 || km > 0 || totalPrice > 0) {
+                                    parsedList.add(RawRefueling(dateMillis, km, liters, pricePerLiter, totalPrice))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (parsedList.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        onResult(false, 0, null)
+                    }
+                    return@launch
+                }
+
+                val existingRefuelings = if (!replaceExisting) {
+                    refuelingDao.getRefuelingsListForProfile(pId)
+                } else {
+                    emptyList()
+                }
+
+                val toInsert = mutableListOf<RawRefueling>()
+                if (replaceExisting) {
+                    toInsert.addAll(parsedList)
+                } else {
+                    for (parsed in parsedList) {
+                        val isDuplicate = existingRefuelings.any { ex ->
+                            (ex.dateMillis == parsed.dateMillis && ex.currentKm == parsed.currentKm) ||
+                            (Math.abs(ex.dateMillis - parsed.dateMillis) < 24 * 60 * 60 * 1000 && ex.currentKm == parsed.currentKm && parsed.currentKm > 0)
+                        }
+                        if (!isDuplicate) {
+                            toInsert.add(parsed)
+                        }
+                    }
+                }
+
+                if (toInsert.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        loadProfileMaintenance(pId)
+                        onResult(true, 0, "Dati già sincronizzati.")
+                    }
+                    return@launch
+                }
+
+                // Ordina per data crescente per calcolare kmDrivenSinceLast
+                val allSorted = (if (replaceExisting) {
+                    toInsert
+                } else {
+                    existingRefuelings.map { 
+                        RawRefueling(it.dateMillis, it.currentKm, it.liters, it.pricePerLiter, it.totalPrice) 
+                    } + toInsert
+                }).sortedWith(compareBy<RawRefueling> { it.dateMillis }.thenBy { it.currentKm })
+
+                val finalEntities = mutableListOf<Refueling>()
+                var prevKm: Int? = null
+                for (raw in allSorted) {
+                    val kmDriven = if (prevKm != null && raw.currentKm >= prevKm) {
+                        raw.currentKm - prevKm
+                    } else {
+                        0
+                    }
+                    if (raw.currentKm > 0) {
+                        prevKm = raw.currentKm
+                    }
+                    finalEntities.add(
+                        Refueling(
+                            dateMillis = raw.dateMillis,
+                            pricePerLiter = raw.pricePerLiter,
+                            liters = raw.liters,
+                            totalPrice = raw.totalPrice,
+                            currentKm = raw.currentKm,
+                            kmDrivenSinceLast = kmDriven,
+                            profileId = pId
+                        )
+                    )
+                }
+
+                if (replaceExisting) {
+                    refuelingDao.deleteRefuelingsForProfile(pId)
+                }
+                refuelingDao.insertRefuelings(finalEntities)
+
+                withContext(Dispatchers.Main) {
+                    loadProfileMaintenance(pId)
+                    onResult(true, toInsert.size, null)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    onResult(false, 0, e.localizedMessage)
+                }
+            }
+        }
     }
 }

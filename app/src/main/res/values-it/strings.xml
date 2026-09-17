@@ -51,4 +51,17 @@
     <string name="price_trend">ANDAMENTO PREZZO (€/L)</string>
     <string name="monthly_total_expense">SPESA TOTALE PER MESE (€)</string>
     <string name="monthly_km">KM PERCORSI PER MESE</string>
+    <string name="consumption_trend">ANDAMENTO CONSUMO (KM/L)</string>
+    <string name="monthly_avg_consumption">CONSUMO MEDIO PER MESE (KM/L)</string>
+    <string name="overall_avg_consumption">MEDIA GLOBALE</string>
+    <string name="insufficient_data_consumption">Dati insufficienti per calcolare il consumo. Effettua almeno 2 rifornimenti tracciando i km!</string>
+    <string name="csv_backup_title">DATI &amp; BACKUP CSV</string>
+    <string name="export_csv_btn">Esporta CSV (Report Excel)</string>
+    <string name="import_csv_btn">Importa CSV (Ripristina Dati)</string>
+    <string name="import_mode_title">Come vuoi importare i dati?</string>
+    <string name="import_replace_option">Sostituisci i rifornimenti attuali</string>
+    <string name="import_merge_option">Unisci ai dati attuali (senza duplicati)</string>
+    <string name="import_success">%1$d rifornimenti ripristinati con successo!</string>
+    <string name="import_no_data">Nessun rifornimento valido trovato nel file selezionato.</string>
+    <string name="import_error">Errore durante l\'importazione del file</string>
 </resources>

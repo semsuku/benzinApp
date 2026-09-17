@@ -51,4 +51,17 @@
     <string name="price_trend">PRICE TREND (€/L)</string>
     <string name="monthly_total_expense">TOTAL MONTHLY EXPENSE (€)</string>
     <string name="monthly_km">KM DRIVEN PER MONTH</string>
+    <string name="consumption_trend">CONSUMPTION TREND (KM/L)</string>
+    <string name="monthly_avg_consumption">MONTHLY AVG CONSUMPTION (KM/L)</string>
+    <string name="overall_avg_consumption">OVERALL AVERAGE</string>
+    <string name="insufficient_data_consumption">Not enough data to calculate consumption. Complete at least 2 refuelings tracking km!</string>
+    <string name="csv_backup_title">CSV DATA &amp; BACKUP</string>
+    <string name="export_csv_btn">Export CSV (Excel Report)</string>
+    <string name="import_csv_btn">Import CSV (Restore Data)</string>
+    <string name="import_mode_title">How do you want to import data?</string>
+    <string name="import_replace_option">Replace existing refuelings</string>
+    <string name="import_merge_option">Merge (add without duplicates)</string>
+    <string name="import_success">%1$d refuelings restored successfully!</string>
+    <string name="import_no_data">No valid refuelings found in the selected file.</string>
+    <string name="import_error">Error during file import</string>
 </resources>

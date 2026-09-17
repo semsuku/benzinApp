@@ -5,6 +5,7 @@ import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Room
@@ -18,6 +19,9 @@ interface RefuelingDao {
     @Insert
     suspend fun insertRefueling(refueling: Refueling)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRefuelings(refuelings: List<Refueling>)
+
     @Update
     suspend fun updateRefueling(refueling: Refueling)
 
@@ -29,6 +33,9 @@ interface RefuelingDao {
 
     @Query("SELECT * FROM refuelings WHERE profileId = :profileId ORDER BY dateMillis DESC")
     fun getRefuelingsForProfile(profileId: Long): Flow<List<Refueling>>
+
+    @Query("SELECT * FROM refuelings WHERE profileId = :profileId ORDER BY dateMillis ASC")
+    suspend fun getRefuelingsListForProfile(profileId: Long): List<Refueling>
 
     @Query("SELECT * FROM refuelings WHERE profileId = :profileId ORDER BY dateMillis DESC LIMIT 1")
     suspend fun getLastRefuelingForProfile(profileId: Long): Refueling?

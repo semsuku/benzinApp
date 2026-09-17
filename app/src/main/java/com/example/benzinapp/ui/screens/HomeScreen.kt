@@ -29,6 +29,10 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.material3.*
 import com.example.benzinapp.ui.components.AdMobBanner
 import com.example.benzinapp.ui.components.ProfileSelector
@@ -127,6 +131,19 @@ fun HomeScreen(
     var moneyPickerTarget by remember { mutableStateOf<MoneyTarget?>(null) }
     var refuelingToDelete by remember { mutableStateOf<Refueling?>(null) }
     var areButtonsVisible by remember { mutableStateOf(true) }
+
+    var showCsvOptionsDialog by remember { mutableStateOf(false) }
+    var showImportModeDialog by remember { mutableStateOf(false) }
+    var selectedCsvUri by remember { mutableStateOf<Uri?>(null) }
+
+    val csvPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            selectedCsvUri = uri
+            showImportModeDialog = true
+        }
+    }
 
     val refuelingsByYearAndMonth = remember(refuelings) {
         val sdfYear = SimpleDateFormat("yyyy", Locale.getDefault())
@@ -489,6 +506,169 @@ fun HomeScreen(
         )
     }
 
+    if (showCsvOptionsDialog) {
+        val context = androidx.compose.ui.platform.LocalContext.current
+        AlertDialog(
+            onDismissRequest = { showCsvOptionsDialog = false },
+            titleContentColor = ComicBlack,
+            textContentColor = ComicBlack,
+            containerColor = Color.White,
+            title = {
+                Text(
+                    text = stringResource(R.string.csv_backup_title),
+                    fontWeight = FontWeight.ExtraBold,
+                    color = ComicBlack
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = {
+                            showCsvOptionsDialog = false
+                            exportToCsv(context, refuelings, viewModel)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ComicGreen),
+                        border = BorderStroke(2.dp, ComicBlack),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.export_csv_btn),
+                            fontWeight = FontWeight.Bold,
+                            color = ComicBlack
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            showCsvOptionsDialog = false
+                            csvPickerLauncher.launch(arrayOf("*/*"))
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ComicYellow),
+                        border = BorderStroke(2.dp, ComicBlack),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.import_csv_btn),
+                            fontWeight = FontWeight.Bold,
+                            color = ComicBlack
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showCsvOptionsDialog = false }) {
+                    Text(stringResource(R.string.cancel), fontWeight = FontWeight.Bold, color = ComicBlack)
+                }
+            }
+        )
+    }
+
+    if (showImportModeDialog && selectedCsvUri != null) {
+        val context = androidx.compose.ui.platform.LocalContext.current
+        AlertDialog(
+            onDismissRequest = {
+                showImportModeDialog = false
+                selectedCsvUri = null
+            },
+            titleContentColor = ComicBlack,
+            textContentColor = ComicBlack,
+            containerColor = Color.White,
+            title = {
+                Text(
+                    text = stringResource(R.string.import_mode_title),
+                    fontWeight = FontWeight.ExtraBold,
+                    color = ComicBlack
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = {
+                            val uri = selectedCsvUri
+                            showImportModeDialog = false
+                            selectedCsvUri = null
+                            if (uri != null) {
+                                viewModel.importRefuelingsFromCsv(uri, replaceExisting = true) { success, count, msg ->
+                                    if (success) {
+                                        Toast.makeText(
+                                            context,
+                                            if (count > 0) context.getString(R.string.import_success, count)
+                                            else (msg ?: context.getString(R.string.import_no_data)),
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            msg ?: context.getString(R.string.import_error),
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ComicRed),
+                        border = BorderStroke(2.dp, ComicBlack),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.import_replace_option),
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            val uri = selectedCsvUri
+                            showImportModeDialog = false
+                            selectedCsvUri = null
+                            if (uri != null) {
+                                viewModel.importRefuelingsFromCsv(uri, replaceExisting = false) { success, count, msg ->
+                                    if (success) {
+                                        Toast.makeText(
+                                            context,
+                                            if (count > 0) context.getString(R.string.import_success, count)
+                                            else (msg ?: context.getString(R.string.import_no_data)),
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            msg ?: context.getString(R.string.import_error),
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ComicBlue),
+                        border = BorderStroke(2.dp, ComicBlack),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.import_merge_option),
+                            fontWeight = FontWeight.Bold,
+                            color = ComicBlack
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = {
+                    showImportModeDialog = false
+                    selectedCsvUri = null
+                }) {
+                    Text(stringResource(R.string.cancel), fontWeight = FontWeight.Bold, color = ComicBlack)
+                }
+            }
+        )
+    }
+
     Scaffold(
         containerColor = LightBlueSky,
         topBar = {
@@ -507,8 +687,8 @@ fun HomeScreen(
                 },
                 actions = {
                     val context = androidx.compose.ui.platform.LocalContext.current
-                    IconButton(onClick = { exportToCsv(context, refuelings) }) {
-                        Icon(Icons.Default.ReceiptLong, contentDescription = "Esporta Excel", tint = ComicBlack)
+                    IconButton(onClick = { showCsvOptionsDialog = true }) {
+                        Icon(Icons.Default.ReceiptLong, contentDescription = stringResource(R.string.csv_backup_title), tint = ComicBlack)
                     }
                     IconButton(onClick = onNavigateToStations) {
                         Icon(Icons.Default.LocalGasStation, contentDescription = "Nearest Stations", tint = ComicBlack)
@@ -1967,7 +2147,7 @@ fun CompanyPickerDialog(
     )
 }
 
-fun exportToCsv(context: android.content.Context, refuelings: List<Refueling>) {
+fun exportToCsv(context: android.content.Context, refuelings: List<Refueling>, viewModel: MainViewModel? = null) {
     try {
         val sdfDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         val sdfMonth = SimpleDateFormat("MMMM", Locale.getDefault())
@@ -2006,6 +2186,27 @@ fun exportToCsv(context: android.content.Context, refuelings: List<Refueling>) {
             val dateStr = sdfDate.format(Date(refueling.dateMillis))
             csvBuilder.append(String.format(Locale.US, "%s;%d;%.2f;%.3f;%.2f\n", 
                 dateStr, refueling.currentKm, refueling.liters, refueling.pricePerLiter, refueling.totalPrice))
+        }
+
+        // Write Maintenance & Deadlines Section
+        if (viewModel != null) {
+            csvBuilder.append("\n\n")
+            csvBuilder.append("DETTAGLIO SCADENZE E MANUTENZIONE\n")
+            csvBuilder.append("Parametro;Valore\n")
+            viewModel.insuranceExpiryDate.value?.let { csvBuilder.append("INSURANCE_EXPIRY;${sdfDate.format(Date(it))}\n") }
+            csvBuilder.append("INSURANCE_AMOUNT;${String.format(Locale.US, "%.2f", viewModel.insuranceAmount.value)}\n")
+            if (viewModel.insuranceCompany.value.isNotBlank()) csvBuilder.append("INSURANCE_COMPANY;${viewModel.insuranceCompany.value}\n")
+            viewModel.bolloExpiryDate.value?.let { csvBuilder.append("BOLLO_EXPIRY;${sdfDate.format(Date(it))}\n") }
+            csvBuilder.append("BOLLO_AMOUNT;${String.format(Locale.US, "%.2f", viewModel.bolloAmount.value)}\n")
+            viewModel.revisioneLastDate.value?.let { csvBuilder.append("REVISIONE_LAST;${sdfDate.format(Date(it))}\n") }
+            csvBuilder.append("REVISIONE_AMOUNT;${String.format(Locale.US, "%.2f", viewModel.revisioneAmount.value)}\n")
+            viewModel.oilLastChangeDate.value?.let { csvBuilder.append("OIL_LAST_DATE;${sdfDate.format(Date(it))}\n") }
+            viewModel.oilLastChangeKm.value?.let { csvBuilder.append("OIL_LAST_KM;$it\n") }
+            csvBuilder.append("OIL_INTERVAL_KM;${viewModel.oilIntervalKm.value}\n")
+            csvBuilder.append("OIL_INTERVAL_MONTHS;${viewModel.oilIntervalMonths.value}\n")
+            viewModel.tireChangeDate.value?.let { csvBuilder.append("TIRE_DATE;${sdfDate.format(Date(it))}\n") }
+            viewModel.tireChangeKm.value?.let { csvBuilder.append("TIRE_KM;$it\n") }
+            viewModel.tireRotationKm.value?.let { csvBuilder.append("TIRE_ROTATION_KM;$it\n") }
         }
         
         val filename = "BenzinApp_Report_Costi.csv"
