@@ -369,8 +369,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         viewModelScope.launch {
             val lastRefueling = refuelingDao.getLastRefuelingForProfile(targetProfileId)
-            val kmDriven = if (lastRefueling != null && currentKm >= lastRefueling.currentKm) {
-                currentKm - lastRefueling.currentKm
+            val effectiveKm = if (currentKm > 0) {
+                currentKm
+            } else {
+                lastRefueling?.currentKm ?: 0
+            }
+            val kmDriven = if (lastRefueling != null && effectiveKm >= lastRefueling.currentKm) {
+                effectiveKm - lastRefueling.currentKm
             } else {
                 0
             }
@@ -380,19 +385,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 pricePerLiter = pricePerLiter,
                 liters = liters,
                 totalPrice = totalPrice,
-                currentKm = currentKm,
+                currentKm = effectiveKm,
                 kmDrivenSinceLast = kmDriven,
                 profileId = targetProfileId
             )
             refuelingDao.insertRefueling(newRefueling)
 
             val rotationThreshold = if (sharedPrefs.contains(prefKey(targetProfileId, "tire_rotation_km"))) sharedPrefs.getInt(prefKey(targetProfileId, "tire_rotation_km"), 0) else null
-            if (rotationThreshold != null && currentKm >= rotationThreshold) {
+            if (rotationThreshold != null && effectiveKm >= rotationThreshold) {
                 sendTireRotationNotification()
             }
 
             val oilThreshold = if (sharedPrefs.contains(prefKey(targetProfileId, "oil_change_km"))) sharedPrefs.getInt(prefKey(targetProfileId, "oil_change_km"), 0) else null
-            if (oilThreshold != null && currentKm >= oilThreshold) {
+            if (oilThreshold != null && effectiveKm >= oilThreshold) {
                 sendOilChangeNotification()
             }
         }
@@ -409,8 +414,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         viewModelScope.launch {
             val prevRefueling = refuelingDao.getPreviousRefuelingForProfile(targetProfileId, dateMillis)
-            val kmDriven = if (prevRefueling != null && currentKm >= prevRefueling.currentKm) {
-                currentKm - prevRefueling.currentKm
+            val effectiveKm = if (currentKm > 0) {
+                currentKm
+            } else {
+                prevRefueling?.currentKm ?: 0
+            }
+            val kmDriven = if (prevRefueling != null && effectiveKm >= prevRefueling.currentKm) {
+                effectiveKm - prevRefueling.currentKm
             } else {
                 0
             }
@@ -421,7 +431,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 pricePerLiter = pricePerLiter,
                 liters = liters,
                 totalPrice = totalPrice,
-                currentKm = currentKm,
+                currentKm = effectiveKm,
                 kmDrivenSinceLast = kmDriven,
                 profileId = targetProfileId
             )

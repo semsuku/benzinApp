@@ -1,19 +1,19 @@
 package com.example.benzinapp.ui.screens
 
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.benzinapp.R
 import com.example.benzinapp.data.Refueling
 import com.example.benzinapp.ui.MainViewModel
-import androidx.compose.ui.res.stringResource
-import com.example.benzinapp.R
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,9 +26,63 @@ fun AddRefuelingScreen(
     refuelingToEdit: Refueling? = null,
     onNavigateBack: () -> Unit
 ) {
-    var litersStr by remember { mutableStateOf(refuelingToEdit?.liters?.toString() ?: initialLiters?.toString() ?: "") }
-    var totalPriceStr by remember { mutableStateOf(refuelingToEdit?.totalPrice?.toString() ?: initialTotalPrice?.toString() ?: "") }
-    var currentKmStr by remember { mutableStateOf(refuelingToEdit?.currentKm?.toString() ?: initialKm?.toString() ?: "") }
+    val refuelings by viewModel.refuelings.collectAsState()
+
+    // Calcolo km di riferimento dal rifornimento precedente
+    val previousKm = remember(refuelings, refuelingToEdit) {
+        if (refuelingToEdit != null) {
+            refuelings.filter { it.id != refuelingToEdit.id && it.dateMillis <= refuelingToEdit.dateMillis }
+                .maxByOrNull { it.dateMillis }?.currentKm ?: 0
+        } else {
+            refuelings.firstOrNull()?.currentKm ?: 0
+        }
+    }
+
+    var totalPriceStr by remember { 
+        mutableStateOf(
+            refuelingToEdit?.totalPrice?.let { String.format(Locale.US, "%.2f", it) } 
+                ?: initialTotalPrice?.let { String.format(Locale.US, "%.2f", it) } 
+                ?: ""
+        ) 
+    }
+
+    var pricePerLiterStr by remember { 
+        mutableStateOf(
+            refuelingToEdit?.pricePerLiter?.let { String.format(Locale.US, "%.3f", it) }
+                ?: if (initialTotalPrice != null && initialLiters != null && initialLiters > 0) {
+                    String.format(Locale.US, "%.3f", initialTotalPrice / initialLiters)
+                } else {
+                    ""
+                }
+        ) 
+    }
+
+    // Calcolo automatico dei litri da Costo Totale e Prezzo al Litro
+    val litersStr = remember(totalPriceStr, pricePerLiterStr) {
+        val total = totalPriceStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val price = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        if (total > 0.0 && price > 0.0) {
+            String.format(Locale.US, "%.2f", total / price)
+        } else {
+            ""
+        }
+    }
+
+    var currentKmStr by remember { 
+        mutableStateOf(
+            refuelingToEdit?.currentKm?.toString() 
+                ?: initialKm?.toString() 
+                ?: if (previousKm > 0) previousKm.toString() else ""
+        ) 
+    }
+
+    // Imposta previousKm se initialKm o refuelingToEdit non sono presenti e previousKm viene caricato successivamente
+    LaunchedEffect(previousKm) {
+        if (currentKmStr.isBlank() && previousKm > 0 && refuelingToEdit == null && initialKm == null) {
+            currentKmStr = previousKm.toString()
+        }
+    }
+
     var dateStr by remember { 
         mutableStateOf(
             if (refuelingToEdit != null) {
@@ -36,22 +90,11 @@ fun AddRefuelingScreen(
             } else {
                 formatMillis(System.currentTimeMillis())
             }
-        )
+        ) 
     }
     var showDatePicker by remember { mutableStateOf(false) }
     var showOdometerPicker by remember { mutableStateOf(false) }
     var showMoneyPicker by remember { mutableStateOf(false) }
-
-    // Calcolo automatico del prezzo al litro
-    val pricePerLiterStr = remember(litersStr, totalPriceStr) {
-        val liters = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val total = totalPriceStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        if (liters > 0 && total > 0) {
-            String.format(Locale.US, "%.3f", total / liters)
-        } else {
-            ""
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -80,7 +123,7 @@ fun AddRefuelingScreen(
                 )
             }
 
-
+            // Data Rifornimento
             Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = dateStr,
@@ -96,14 +139,7 @@ fun AddRefuelingScreen(
                 )
             }
 
-            OutlinedTextField(
-                value = litersStr,
-                onValueChange = { litersStr = it },
-                label = { Text(stringResource(R.string.liters_hint)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
-            )
-
+            // Costo Totale (€)
             Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = totalPriceStr,
@@ -119,18 +155,38 @@ fun AddRefuelingScreen(
                 )
             }
 
+            // Prezzo al Litro (€/L) - EDITABILE
             OutlinedTextField(
                 value = pricePerLiterStr,
-                onValueChange = { /* Non editabile */ },
+                onValueChange = { input ->
+                    pricePerLiterStr = input.replace(',', '.')
+                },
                 label = { Text(stringResource(R.string.price_per_liter_hint)) },
-                readOnly = true,
-                enabled = false,
+                placeholder = { Text("es. 1.789") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // Litri - CALCOLATO IN AUTOMATICO
+            OutlinedTextField(
+                value = litersStr,
+                onValueChange = { /* Calcolato automaticamente */ },
+                label = { Text("${stringResource(R.string.liters_hint)} (calcolo automatico)") },
+                readOnly = true,
+                enabled = false,
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledBorderColor = MaterialTheme.colorScheme.outline,
+                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Km Attuali - Default precedente se vuoto
             Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
-                    value = currentKmStr,
+                    value = if (currentKmStr.isNotBlank()) currentKmStr else if (previousKm > 0) "$previousKm (default prec.)" else "",
                     onValueChange = {},
                     label = { Text(stringResource(R.string.current_km)) },
                     readOnly = true,
@@ -145,15 +201,24 @@ fun AddRefuelingScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
+            val total = totalPriceStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+            val price = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+            val liters = litersStr.replace(",", ".").toDoubleOrNull() ?: (if (price > 0) total / price else 0.0)
+            val isFormValid = total > 0.0 && price > 0.0 && liters > 0.0
+
             Button(
                 onClick = {
-                    val liters = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-                    val total = totalPriceStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-                    val price = pricePerLiterStr.toDoubleOrNull() ?: 0.0
-                    val km = currentKmStr.toIntOrNull() ?: 0
+                    val kmInput = currentKmStr.toIntOrNull()
+                    val km = if (kmInput != null && kmInput > 0) {
+                        kmInput
+                    } else if (previousKm > 0) {
+                        previousKm
+                    } else {
+                        0
+                    }
                     val parsedDate = parseDate(dateStr) ?: System.currentTimeMillis()
- 
-                    if (liters > 0 && total > 0) {
+
+                    if (isFormValid) {
                         if (refuelingToEdit != null) {
                             viewModel.updateRefueling(
                                 id = refuelingToEdit.id,
@@ -176,10 +241,11 @@ fun AddRefuelingScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = litersStr.isNotBlank() && totalPriceStr.isNotBlank() && pricePerLiterStr.isNotBlank()
+                enabled = isFormValid
             ) {
                 Text(if (refuelingToEdit != null) stringResource(R.string.save_changes) else stringResource(R.string.save_expense))
             }
+
             if (showDatePicker) {
                 DatePickerDialogPicker(
                     initialSelectedDateMillis = parseDate(dateStr) ?: System.currentTimeMillis(),
@@ -191,7 +257,7 @@ fun AddRefuelingScreen(
             }
             if (showOdometerPicker) {
                 OdometerPickerDialog(
-                    initialValue = currentKmStr.toIntOrNull() ?: 0,
+                    initialValue = currentKmStr.toIntOrNull() ?: if (previousKm > 0) previousKm else 0,
                     title = stringResource(R.string.current_km),
                     onValueSelected = { valVal ->
                         currentKmStr = valVal.toString()
